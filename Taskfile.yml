@@ -1,0 +1,23 @@
+# https://taskfile.dev
+
+version: '3'
+
+env:
+  GO_MODULE: github.com/Semior001/groxy
+
+tasks:
+  gen:
+    desc: "generate all"
+    deps:
+      - gen/annotation
+      - gen/testdata
+
+  gen/annotation:
+    desc: "generate annotation"
+    cmd: |
+      protoc --go_out=./groxypb --go_opt=module=$GO_MODULE/groxypb ./groxypb/*.proto
+
+  gen/testdata:
+    desc: "generate testdata"
+    cmds:
+      - protoc --go_out=./pkg/protodef/testdata --go_opt=module=$GO_MODULE/pkg/protodef/testdata ./pkg/protodef/testdata/*.gen.proto

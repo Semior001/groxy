@@ -1,0 +1,39 @@
+version: 1
+
+# by default, groxy will respond with the status code INTERNAL and the message "didn't match the request to any rule".
+not-matched:
+  status: { code: "NOT_FOUND", message: "some custom not found" }
+
+rules:
+    # The next rule will respond with a predefined message.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+    respond:
+      body: |
+        message StubResponse {
+            // this option specifies that the message is a response
+            option              (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "Hello, World!"];
+            int32 code     = 2 [(groxypb.value)  = "200"];
+        }
+
+    # The same example as above, but with the target response dependant.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+    respond:
+      body: |
+        message Dependency {
+            string some_dependant_value = 6;
+        }
+        
+        message StubResponse {
+            // this option specifies that the message is a response
+            option (groxypb.target) = true; 
+            Dependency dependency = 3 [(groxypb.value)  = '{"some_dependant_value": "Hello, World!"}'];
+        }
+
+    # The next rule will respond with an error message.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Error" }
+    respond:
+      status: { code: "INVALID_ARGUMENT", message: "invalid request" }
+      metadata:
+        headers: { X-Request-Id: "123"   }
+        trailer: { Powered-By:   "groxy" }

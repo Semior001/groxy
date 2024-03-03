@@ -1,0 +1,23 @@
+syntax = "proto3";
+package groxy.runtime_generated;
+
+option go_package = "github.com/Semior001/groxy/pkg/protodef/testdata;testdata";
+
+message Nested {
+  Enum enum = 1;
+  string nested_value = 6;
+}
+
+enum Enum {
+  STUB_ENUM_UNSPECIFIED = 0;
+  STUB_ENUM_FIRST = 1;
+  STUB_ENUM_SECOND = 2;
+}
+
+message Response {
+  Nested nested = 3;
+  Enum enum = 9;
+  repeated Nested nesteds = 10;
+  map<string, Nested> nested_map = 11;
+  reserved 4, 5, 7, 8;
+}

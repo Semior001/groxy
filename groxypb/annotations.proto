@@ -1,0 +1,14 @@
+syntax = "proto3";
+package groxypb;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/Semior001/groxy/groxypb;groxypb";
+
+extend google.protobuf.FieldOptions {
+  string value  = 50000;
+}
+
+extend google.protobuf.MessageOptions {
+  bool target   = 51000;
+}

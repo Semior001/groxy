@@ -1,0 +1,55 @@
+message Dependency {
+  string some_dependant_value = 1;
+}
+
+message AllPossibleTypes {
+  option (groxypb.target) = true;
+  string string = 1 [(groxypb.value) = "Hello, World!"];
+  int32 int32 = 2 [(groxypb.value) = "42"];
+  int64 int64 = 3 [(groxypb.value) = "42"];
+  uint32 uint32 = 4 [(groxypb.value) = "42"];
+  uint64 uint64 = 5 [(groxypb.value) = "42"];
+  float float = 6 [(groxypb.value) = "42.42"];
+  double double = 7 [(groxypb.value) = "42.42"];
+  bool bool = 8 [(groxypb.value) = "true"];
+  bytes bytes = 9 [(groxypb.value) = "SGVsbG8sIFdvcmxkIQ=="];
+  Dependency dependency = 10 [(groxypb.value) = '{"some_dependant_value": "Hello, World!"}'];
+  repeated string repeated_string = 11 [(groxypb.value) = '["Hello, World!"]'];
+  repeated int32 repeated_int32 = 12 [(groxypb.value) = '["42"]'];
+  repeated int64 repeated_int64 = 13 [(groxypb.value) = '["42"]'];
+  repeated uint32 repeated_uint32 = 14 [(groxypb.value) = '["42"]'];
+  repeated uint64 repeated_uint64 = 15 [(groxypb.value) = '["42"]'];
+  repeated float repeated_float = 16 [(groxypb.value) = '["42.42"]'];
+  repeated double repeated_double = 17 [(groxypb.value) = '["42.42"]'];
+  repeated bool repeated_bool = 18 [(groxypb.value) = '["true"]'];
+  repeated bytes repeated_bytes = 19 [(groxypb.value) = '["SGVsbG8sIFdvcmxkIQ=="]'];
+  repeated Dependency repeated_dependency = 20 [(groxypb.value) = '[{"some_dependant_value": "Hello, World!"}]'];
+  repeated string repeated_string_empty = 21 [(groxypb.value) = '[]'];
+  repeated int32 repeated_int32_empty = 22 [(groxypb.value) = '[]'];
+  repeated int64 repeated_int64_empty = 23 [(groxypb.value) = '[]'];
+  repeated uint32 repeated_uint32_empty = 24 [(groxypb.value) = '[]'];
+  repeated uint64 repeated_uint64_empty = 25 [(groxypb.value) = '[]'];
+  repeated float repeated_float_empty = 26 [(groxypb.value) = '[]'];
+  repeated double repeated_double_empty = 27 [(groxypb.value) = '[]'];
+  repeated bool repeated_bool_empty = 28 [(groxypb.value) = '[]'];
+  repeated bytes repeated_bytes_empty = 29 [(groxypb.value) = '[]'];
+  repeated Dependency repeated_dependency_empty = 30 [(groxypb.value) = '[]'];
+  repeated string repeated_string_null = 31 [(groxypb.value) = 'null'];
+  repeated int32 repeated_int32_null = 32 [(groxypb.value) = 'null'];
+  repeated int64 repeated_int64_null = 33 [(groxypb.value) = 'null'];
+  repeated uint32 repeated_uint32_null = 34 [(groxypb.value) = 'null'];
+  repeated uint64 repeated_uint64_null = 35 [(groxypb.value) = 'null'];
+  repeated float repeated_float_null = 36 [(groxypb.value) = 'null'];
+  repeated double repeated_double_null = 37 [(groxypb.value) = 'null'];
+  repeated bool repeated_bool_null = 38 [(groxypb.value) = 'null'];
+  repeated bytes repeated_bytes_null = 39 [(groxypb.value) = 'null'];
+  repeated Dependency repeated_dependency_null = 40 [(groxypb.value) = 'null'];
+  enum Enum {
+    ENUM_UNSPECIFIED = 0;
+    ENUM_VALUE = 1;
+  }
+  Enum enum = 41 [(groxypb.value) = "ENUM_VALUE"];
+  repeated Enum repeated_enum = 42 [(groxypb.value) = '["ENUM_VALUE"]'];
+  repeated Enum repeated_enum_empty = 43 [(groxypb.value) = '[]'];
+  repeated Enum repeated_enum_null = 44 [(groxypb.value) = 'null'];
+}

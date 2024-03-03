@@ -1,0 +1,27 @@
+run:
+  tests: false
+  output:
+    format: tab
+  skip-dirs:
+    - vendor
+
+linters:
+  enable:
+    - unconvert
+    - megacheck
+    - gas
+    - gocyclo
+    - dupl
+    - misspell
+    - unparam
+    - typecheck
+    - ineffassign
+    - revive
+  disable-all: true
+
+issues:
+  exclude-use-default: false
+  # supress duplicating struct tags in staticcheck
+  exclude-rules:
+      - linters: [staticcheck]
+        text: "SA5008: duplicate struct tag"
