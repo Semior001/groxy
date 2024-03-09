@@ -1,3 +1,4 @@
+// Package main is an application entrypoint.
 package main
 
 import (

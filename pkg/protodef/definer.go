@@ -1,3 +1,5 @@
+// Package protodef provides functions to make dynamic protobuf messages
+// with the use of the groxypb options in protobuf snippets.
 package protodef
 
 import (
@@ -39,10 +41,7 @@ func NewDefiner(opts ...Option) *Definer {
 // ParseTarget seeks the target message in the given protobuf snippet and
 // returns a zero-valued proto.Message that can be used to parse messages.
 func (b *Definer) ParseTarget(def string) (proto.Message, error) {
-	def, err := b.enrich(def)
-	if err != nil {
-		return nil, fmt.Errorf("enrich protobuf: %w", err)
-	}
+	def = b.enrich(def)
 
 	fd, err := b.parseDefinition(def)
 	if err != nil {
@@ -61,10 +60,7 @@ func (b *Definer) ParseTarget(def string) (proto.Message, error) {
 // BuildTarget seeks the target message in the given protobuf snippet and
 // returns a proto.Message that can be used to respond requests or match requests to.
 func (b *Definer) BuildTarget(def string) (proto.Message, error) {
-	def, err := b.enrich(def)
-	if err != nil {
-		return nil, fmt.Errorf("enrich protobuf: %w", err)
-	}
+	def = b.enrich(def)
 
 	fd, err := b.parseDefinition(def)
 	if err != nil {
@@ -84,13 +80,13 @@ func (b *Definer) BuildTarget(def string) (proto.Message, error) {
 	return protoadapt.MessageV2Of(msg), nil
 }
 
-func (b *Definer) enrich(def string) (string, error) {
+func (b *Definer) enrich(def string) string {
 	sb := &strings.Builder{}
 	_, _ = fmt.Fprintln(sb, `syntax = "proto3";`)
 	_, _ = fmt.Fprintln(sb, `import "groxypb/annotations.proto";`)
 	_, _ = fmt.Fprintln(sb)
 	_, _ = fmt.Fprintln(sb, def)
-	return sb.String(), nil
+	return sb.String()
 }
 
 func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
@@ -100,7 +96,7 @@ func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
 			case f == "groxy-runtime-gen.proto":
 				return io.NopCloser(strings.NewReader(def)), nil
 			case b.loadFromOS:
-				return os.Open(f)
+				return os.Open(f) //nolint:gosec // this is on user's behalf
 			default:
 				return nil, fmt.Errorf("can't resolve not well-known file: %s", f)
 			}

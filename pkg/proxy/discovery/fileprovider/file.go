@@ -1,3 +1,4 @@
+// Package fileprovider provides a file-based discovery provider.
 package fileprovider
 
 import (

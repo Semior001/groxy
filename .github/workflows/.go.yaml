@@ -1,0 +1,95 @@
+name: build
+
+on:
+  push:
+    branches: [ master ]
+    tags:     [ v* ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: set up go 1.22.0
+        uses: actions/setup-go@v4
+        id: go
+        with:
+          go-version: 1.22.0
+
+      - name: checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: build and test
+        run: |
+          go test -v -timeout=100s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
+          cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "mock_" > $GITHUB_WORKSPACE/profile.cov
+        working-directory: app
+        env:
+          TZ: "Asia/Almaty"
+          CGO_ENABLED: 0
+
+      - name: run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.54.2
+          working-directory: app
+          args: --timeout 5m
+          skip-cache: true
+          skip-pkg-cache: true
+          skip-build-cache: true
+
+      - name: submit coverage to codecov
+        run: |
+          cat $GITHUB_WORKSPACE/profile.cov > $GITHUB_WORKSPACE/coverage.txt
+          cd $GITHUB_WORKSPACE
+          bash <(curl -s https://codecov.io/bash)
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          GOFLAGS: "-mod=mod"
+          CGO_ENABLED: 0
+
+      - name: set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: set up Docker Buildx
+        id: buildx
+        if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
+        uses: docker/setup-buildx-action@v1
+
+      - name: login to ghcr
+        id: docker_login
+        if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build and deploy master image to ghcr.io and dockerhub
+        if: ${{ github.ref == 'refs/heads/master' }}
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
+          echo GITHUB_REF - $ref
+          docker buildx build --push \
+              --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
+              --platform linux/amd64,linux/arm/v7,linux/arm64 \
+              -t ghcr.io/semior001/groxy:${ref} .
+
+      - name: deploy tagged (latest) to ghcr.io and dockerhub
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
+          echo GITHUB_REF - $ref
+          docker buildx build --push \
+              --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
+              --platform linux/amd64,linux/arm/v7,linux/arm64 \
+              -t ghcr.io/semior001/groxy:${ref} -t ghcr.io/semior001/groxy:latest .

@@ -1,3 +1,4 @@
+// Package proxy provides server and codec for proxying gRPC requests.
 package proxy
 
 import (
@@ -32,7 +33,7 @@ type Server struct {
 func NewServer(m *discovery.Service, opts ...Option) *Server {
 	s := &Server{
 		matcher: m,
-		defaultResponder: func(stream grpc.ServerStream, firstRecv []byte) error {
+		defaultResponder: func(_ grpc.ServerStream, _ []byte) error {
 			return status.Error(codes.Internal, "{groxy} didn't match request to any rule")
 		},
 	}

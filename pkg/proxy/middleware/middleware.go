@@ -1,3 +1,4 @@
+// Package middleware contains middlewares for gRPC unknown handlers.
 package middleware
 
 import (
