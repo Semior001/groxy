@@ -33,7 +33,8 @@ jobs:
         run: |
           GO111MODULE=off go get -u -v github.com/mattn/goveralls
           $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
-        env: { COVERALLS_TOKEN: ${ { secrets.GITHUB_TOKEN } } }
+        env:
+          COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: run golangci-lint
         uses: golangci/golangci-lint-action@v3
