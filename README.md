@@ -8,6 +8,19 @@
 
 gRoxy is a gRPC mocking server that allows you to mock gRPC services and responses easily by specifying the message content alongside the message definition. gRoxy is designed to be used in development and testing environments to help you test your gRPC clients and services without having to rely on the actual gRPC server.
 
+* * *
+
+- [installation](#installation)
+- [usage](#usage)
+  - [example](#example)
+  - [configuration](#configuration)
+  - [groxypb](#groxypb)
+    - [nested messages](#nested-messages)
+    - [enums](#enums)
+    - [repeated fields](#repeated-fields)
+    - [maps](#maps)
+- [project status](#status)
+
 ## installation
 You can install gRoxy using the following command:
 
@@ -40,6 +53,30 @@ file:
 Help Options:
   -h, --help                 Show this help message
 ```
+
+### example
+The simplest configuration for a method "Stub" would look like this:
+
+```yaml
+version: 1
+
+rules:
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+    respond:
+      body: |
+        message StubResponse {
+            option              (groxypb.target) = true; // this option specifies that the message is a response 
+            string message = 1 [(groxypb.value)  = "Hello, World!"];
+            int32 code     = 2 [(groxypb.value)  = "200"];
+        }
+```
+
+That's it. You just need to define the response message, mark it as a target response message via the option, and set values via the value option. The response message will be sent to the client when the client calls the "Stub" method. No need for providing protosets, no need for providing the whole set of definitions, just the message you want to send.
+
+More importantly, if your response message contains lots of fields, which are not important for the test, you can just ignore them. gRoxy will leave them empty, and the client will not be able to distinguish between the real server and the mock server. That's ensured by the protobuf's backward compatibility.
+
+Field is backward compatible if it's of the same type and the same number. Names of the fields and messages are not important.
+
 
 ### configuration
 gRoxy uses a YAML configuration file to define the rules for the gRPC mocking server. The configuration file consists of the following sections:
@@ -74,25 +111,74 @@ The configuration file is being watched for changes, and the server will reload 
 
 You can also take a look at [examples](_example) for more information.
 
-## example
-The simplest configuration for a method "Stub" would look like this:
+### groxypb
+gRoxy uses the `groxypb` annotations to define values in protobuf message snippets. It compiles protobuf in a runtime, checking the target via the `groxypb.target` option and interpreting values via the `groxypb.value` option.
 
-```yaml
-version: 1
-
-rules:
-  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
-    respond:
-      body: |
-        message StubResponse {
-            option              (groxypb.target) = true; // this option specifies that the message is a response 
-            string message = 1 [(groxypb.value)  = "Hello, World!"];
-            int32 code     = 2 [(groxypb.value)  = "200"];
-        }
+Example of the snippet:
+```protobuf
+message SomeMessage {
+    option              (groxypb.target) = true; 
+    string message = 1 [(groxypb.value) = "Hello, World!"];
+    int32 code = 2     [(groxypb.value) = "200"];
+}
 ```
 
-That's it. You just need to define the response message, mark it as a target response message via the option, and set values via the value option. The response message will be sent to the client when the client calls the "Stub" method. No need for providing protosets, no need for providing the whole set of definitions, just the message you want to send.
+#### nested messages
+In case of nested messages, there are two options how to set values:
+1. Set the value in the nested message:
+```protobuf
+message SomeMessage {
+    option                    (groxypb.target) = true; 
+    string parent_value = 1   [(groxypb.value) = "parent"];
+    NestedMessage nested = 2;
+}
 
-More importantly, if your response message contains lots of fields, which are not important for the test, you can just ignore them. gRoxy will leave them empty, and the client will not be able to distinguish between the real server and the mock server. That's ensured by the protobuf's backward compatibility.
+message NestedMessage {
+    string nested_value = 1 [(groxypb.value) = "nested"];
+}
+```
 
-Field is backward compatible if it's of the same type and the same number. Names of the fields and messages are not important.
+2. Set the JSON value in the annotation to the parent's field:
+```protobuf
+message SomeMessage {
+    option                    (groxypb.target) = true; 
+    string parent_value = 1  [(groxypb.value) = "parent"];
+    NestedMessage nested = 2 [(groxypb.value) = "{\"nested_value\": \"nested\"}"];
+}
+```
+
+#### enums
+
+For enums, the value should be set as a string name of the enum value:
+```protobuf
+enum SomeEnum { 
+    EMPTY = 0; 
+    NEEDED_VALUE = 2; 
+}
+
+message StubResponse {
+    option (groxypb.target) = true;
+    SomeEnum some_enum = 9 [(groxypb.value) = 'NEEDED_VALUE'];
+}
+```
+
+#### repeated fields
+For repeated fields, the value should be set as a JSON array of the values:
+```protobuf
+message StubResponse {
+    option (groxypb.target) = true;
+    repeated string repeated_field = 1 [(groxypb.value) = '["value1", "value2"]'];
+}
+```
+
+#### maps
+For maps, the value should be set as a JSON object of the key-value pairs:
+```protobuf
+message StubResponse {
+    option (groxypb.target) = true;
+    map<string, string> map_field = 1 [(groxypb.value) = '{"key1": "value1", "key2": "value2"}'];
+}
+```
+
+## status
+The project is currently in active development, and breaking changes may occur until the release of version 1.0. However, we strive to minimize disruptions and will only introduce breaking changes when there is a compelling reason to do so.
