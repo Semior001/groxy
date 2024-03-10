@@ -14,3 +14,6 @@ func Version(v string) Option {
 func WithGRPCServerOptions(opts ...grpc.ServerOption) Option {
 	return func(o *Server) { o.serverOpts = append(o.serverOpts, opts...) }
 }
+
+// Debug sets the debug mode.
+func Debug() Option { return func(s *Server) { s.debug = true } }

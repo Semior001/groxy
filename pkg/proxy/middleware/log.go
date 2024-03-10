@@ -14,38 +14,74 @@ import (
 )
 
 // Log logs the gRPC requests.
-func Log(next grpc.StreamHandler) grpc.StreamHandler {
-	return func(srv any, stream grpc.ServerStream) (err error) {
-		ctx := stream.Context()
-		ss := &statsStream{ServerStream: stream}
+func Log(debug bool) func(next grpc.StreamHandler) grpc.StreamHandler {
+	return func(next grpc.StreamHandler) grpc.StreamHandler {
+		return func(srv any, stream grpc.ServerStream) (err error) {
+			ctx := stream.Context()
+			ss := &statsStream{ServerStream: stream}
 
-		start := time.Now()
-		defer func() {
-			elapsed := time.Since(start)
-			mtd, ok := grpc.Method(ctx)
-			if !ok {
-				mtd = "unknown"
-			}
+			start := time.Now()
+			defer func() {
+				elapsed := time.Since(start)
+				mtd, ok := grpc.Method(ctx)
+				if !ok {
+					mtd = "unknown"
+				}
 
-			pi, ok := peer.FromContext(ctx)
-			if !ok {
-				pi = &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4zero}}
-			}
+				pi, ok := peer.FromContext(ctx)
+				if !ok {
+					pi = &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4zero}}
+				}
 
-			slog.InfoContext(ctx, "request",
-				slog.String("uri", mtd),
-				slog.String("remote", pi.Addr.String()),
-				slog.Duration("elapsed", elapsed),
-				slog.Int("recv_count", ss.recvCount),
-				slog.Int64("recv_size", ss.recvSize),
-				slog.Int("send_count", ss.sendCount),
-				slog.Int64("send_size", ss.sendSize),
-				slogx.Error(err),
-			)
-		}()
+				attrs := []any{
+					slog.String("uri", mtd),
+					slog.String("remote", pi.Addr.String()),
+					slog.Duration("elapsed", elapsed),
+					slog.Int("recv_count", ss.recvCount),
+					slog.Int64("recv_size", ss.recvSize),
+					slog.Int("send_count", ss.sendCount),
+					slog.Int64("send_size", ss.sendSize),
+					slogx.Error(err),
+				}
 
-		return next(srv, ss)
+				if debug {
+					reqHeader, _ := metadata.FromIncomingContext(ctx)
+					attrs = append(attrs,
+						slog.Any("request_header", filterMD(reqHeader)),
+						slog.Any("response_header", filterMD(ss.header)),
+						slog.Any("response_trailer", filterMD(ss.trailer)),
+					)
+				}
+
+				slog.InfoContext(ctx, "request", attrs...)
+			}()
+
+			return next(srv, ss)
+		}
 	}
+}
+
+var hideHeaders = map[string]struct{}{
+	"authorization": {},
+	"cookie":        {},
+	"set-cookie":    {},
+}
+
+func filterMD(md metadata.MD) metadata.MD {
+	if md == nil {
+		return nil
+	}
+
+	out := make(metadata.MD)
+	for k, v := range md {
+		if _, ok := hideHeaders[k]; ok {
+			out[k] = []string{"***"}
+			continue
+		}
+		out[k] = v
+	}
+
+	return out
 }
 
 type statsStream struct {

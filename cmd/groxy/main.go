@@ -75,7 +75,13 @@ func run(ctx context.Context) error {
 			Delay:         opts.File.Delay,
 		},
 	}}
-	srv := proxy.NewServer(dsvc, proxy.Version(getVersion()))
+
+	proxyOpts := []proxy.Option{proxy.Version(getVersion())}
+	if opts.Debug {
+		proxyOpts = append(proxyOpts, proxy.Debug())
+	}
+
+	srv := proxy.NewServer(dsvc, proxyOpts...)
 
 	ewg, ctx := errgroup.WithContext(ctx)
 	ewg.Go(func() error {

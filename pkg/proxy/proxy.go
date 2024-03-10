@@ -25,8 +25,9 @@ type Server struct {
 	defaultResponder func(stream grpc.ServerStream, firstRecv []byte) error
 	matcher          *discovery.Service
 
-	l    net.Listener
-	grpc *grpc.Server
+	debug bool
+	l     net.Listener
+	grpc  *grpc.Server
 }
 
 // NewServer creates a new server.
@@ -55,7 +56,7 @@ func (s *Server) Listen(addr string) (err error) {
 		grpc.UnknownServiceHandler(middleware.Chain(s.handle,
 			middleware.Recoverer,
 			middleware.AppInfo("groxy", "Semior001", s.version),
-			middleware.Log,
+			middleware.Log(s.debug),
 		)),
 		grpc.ForceServerCodec(RawBytesCodec{}),
 	)...)
