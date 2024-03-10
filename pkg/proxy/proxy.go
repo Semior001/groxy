@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"net"
 
-	"github.com/Semior001/groxy/pkg/proxy/discovery"
+	"github.com/Semior001/groxy/pkg/discovery"
 	"github.com/Semior001/groxy/pkg/proxy/middleware"
 	"github.com/cappuccinotm/slogx"
 	"google.golang.org/grpc"
@@ -54,7 +54,7 @@ func (s *Server) Listen(addr string) (err error) {
 	s.grpc = grpc.NewServer(append(s.serverOpts,
 		grpc.UnknownServiceHandler(middleware.Chain(s.handle,
 			middleware.Recoverer,
-			middleware.AppInfo(s.version, "Semior001", "groxy"),
+			middleware.AppInfo("groxy", "Semior001", s.version),
 			middleware.Log,
 		)),
 		grpc.ForceServerCodec(RawBytesCodec{}),
@@ -88,21 +88,30 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 		md = metadata.New(nil)
 	}
 
-	req := discovery.Request{URI: mtd, IncomingMetadata: md}
+	matches := s.matcher.MatchMetadata(mtd, md)
+	if len(matches) == 0 {
+		return s.defaultResponder(stream, nil)
+	}
 
-	matches, ok := s.matcher.Match(req)
-	if !ok {
-		if err := stream.RecvMsg(&req.FirstRecv); err != nil {
+	slog.DebugContext(ctx, "found matches", slog.Any("matches", matches))
+
+	match := matches[0]
+	if matches.NeedsDeeperMatch() {
+		var bts []byte
+
+		if err := stream.RecvMsg(&bts); err != nil {
 			slog.WarnContext(ctx, "failed to read the first RECV", slogx.Error(err))
 			return s.defaultResponder(stream, nil)
 		}
 
-		if matches, ok = s.matcher.Match(req); !ok {
-			return s.defaultResponder(stream, req.FirstRecv)
+		if match, ok = matches.MatchMessage(bts); !ok {
+			return s.defaultResponder(stream, bts)
 		}
 	}
 
-	return s.mock(stream, matches.Mock)
+	slog.DebugContext(ctx, "matched", slog.Any("match", match))
+
+	return s.mock(stream, match.Mock)
 }
 
 func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {

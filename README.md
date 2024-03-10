@@ -24,3 +24,7 @@ rules:
             int32 code     = 2 [(groxypb.value)  = "200"];
         }
 ```
+
+* * *
+!
+

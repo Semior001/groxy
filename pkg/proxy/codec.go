@@ -29,7 +29,7 @@ func (RawBytesCodec) Marshal(v any) ([]byte, error) {
 
 // Unmarshal sets the received bytes as is to the target.
 func (RawBytesCodec) Unmarshal(data []byte, v any) error {
-	if data == nil {
+	if data == nil || v == nil {
 		return nil
 	}
 

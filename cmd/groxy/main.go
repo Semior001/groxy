@@ -13,9 +13,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Semior001/groxy/pkg/discovery"
+	"github.com/Semior001/groxy/pkg/discovery/fileprovider"
 	"github.com/Semior001/groxy/pkg/proxy"
-	"github.com/Semior001/groxy/pkg/proxy/discovery"
-	"github.com/Semior001/groxy/pkg/proxy/discovery/fileprovider"
 	"github.com/cappuccinotm/slogx"
 	"github.com/cappuccinotm/slogx/slogm"
 	"github.com/jessevdk/go-flags"
@@ -102,7 +102,7 @@ func run(ctx context.Context) error {
 			Delay:         opts.File.Delay,
 		},
 	}}
-	srv := proxy.NewServer(dsvc)
+	srv := proxy.NewServer(dsvc, proxy.Version(getVersion()))
 
 	ewg, ctx := errgroup.WithContext(ctx)
 	ewg.Go(func() error {

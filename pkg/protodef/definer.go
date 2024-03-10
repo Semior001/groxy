@@ -38,25 +38,6 @@ func NewDefiner(opts ...Option) *Definer {
 	return d
 }
 
-// ParseTarget seeks the target message in the given protobuf snippet and
-// returns a zero-valued proto.Message that can be used to parse messages.
-func (b *Definer) ParseTarget(def string) (proto.Message, error) {
-	def = b.enrich(def)
-
-	fd, err := b.parseDefinition(def)
-	if err != nil {
-		return nil, fmt.Errorf("parse enriched definition: %w", err)
-	}
-
-	target, err := b.findTarget(fd)
-	if err != nil {
-		return nil, fmt.Errorf("find target message: %w", err)
-	}
-
-	msg := dynamic.NewMessage(target)
-	return protoadapt.MessageV2Of(msg), nil
-}
-
 // BuildTarget seeks the target message in the given protobuf snippet and
 // returns a proto.Message that can be used to respond requests or match requests to.
 func (b *Definer) BuildTarget(def string) (proto.Message, error) {

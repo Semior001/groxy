@@ -10,7 +10,9 @@ type Config struct {
 // Rule specifies a route matching rule.
 type Rule struct {
 	Match struct {
-		URI string `yaml:"uri"`
+		URI    string            `yaml:"uri"`
+		Header map[string]string `yaml:"header"`
+		Body   *string           `yaml:"body"`
 	} `yaml:"match"`
 	Respond Respond `yaml:"respond"`
 }
@@ -19,7 +21,7 @@ type Rule struct {
 type Respond struct {
 	Body     *string `yaml:"body"`
 	Metadata *struct {
-		Header  map[string]string `yaml:"headers"`
+		Header  map[string]string `yaml:"header"`
 		Trailer map[string]string `yaml:"trailer"`
 	} `yaml:"metadata"`
 	Status *struct {

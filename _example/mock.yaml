@@ -6,14 +6,41 @@ not-matched:
 
 rules:
     # The next rule will respond with a predefined message.
-  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      header:
+        test: true
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "needed value"];
+        }
     respond:
       body: |
         message StubResponse {
             // this option specifies that the message is a response
             option              (groxypb.target) = true; 
-            string message = 1 [(groxypb.value)  = "Hello, World!"];
+            string message = 1 [(groxypb.value)  = "needed value received"];
             int32 code     = 2 [(groxypb.value)  = "200"];
+        }
+
+    # The next rule will respond with a predefined message.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      header:
+        test: true
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "some other needed value"];
+        }
+    respond:
+      body: |
+        message StubResponse {
+            // this option specifies that the message is a response
+            option              (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "lol that works"];
+            int32 code     = 2 [(groxypb.value)  = "400"];
         }
 
     # The same example as above, but with the target response dependant.

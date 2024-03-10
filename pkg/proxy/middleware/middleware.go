@@ -7,8 +7,10 @@ import (
 
 	"github.com/cappuccinotm/slogx"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
+	"google.golang.org/grpc/status"
 )
 
 // Middleware is a function that intercepts the execution of a gRPC handler.
@@ -63,7 +65,10 @@ func Recoverer(next grpc.StreamHandler) grpc.StreamHandler {
 				slog.ErrorContext(ctx, "stream panic",
 					slog.String("method", mtd),
 					slog.String("remote", pi.Addr.String()),
-					slog.Any("panic", rvr))
+					slog.Any("panic", rvr),
+					slogx.Error(err))
+
+				err = status.Error(codes.ResourceExhausted, "{groxy} panic")
 			}
 		}()
 		return next(srv, stream)

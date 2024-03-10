@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"time"
 
+	"github.com/Semior001/groxy/pkg/discovery"
 	"github.com/Semior001/groxy/pkg/protodef"
-	"github.com/Semior001/groxy/pkg/proxy/discovery"
 	"github.com/cappuccinotm/slogx"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -43,8 +43,6 @@ func (d *File) Events(ctx context.Context) <-chan string {
 		}
 	}
 
-	trySubmit(res) // parse for the first time
-
 	go func() {
 		ticker := time.NewTicker(d.CheckInterval)
 		defer close(res)
@@ -52,6 +50,11 @@ func (d *File) Events(ctx context.Context) <-chan string {
 
 		var lastModif, modif time.Time
 		var ok bool
+
+		if modif, ok = d.getModifTime(ctx); ok { // parse for the first time
+			res <- d.Name()
+			lastModif = modif
+		}
 
 		for {
 			select {
@@ -83,7 +86,7 @@ func (d *File) Events(ctx context.Context) <-chan string {
 }
 
 // Rules parses the file and returns the routing rules from it.
-func (d *File) Rules(context.Context) ([]discovery.Rule, error) {
+func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 	f, err := os.Open(d.FileName)
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
@@ -119,7 +122,7 @@ func (d *File) Rules(context.Context) ([]discovery.Rule, error) {
 			result.Status = status.New(code, r.Status.Message)
 		case r.Body != nil:
 			if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
-				return nil, fmt.Errorf("build message: %w", err)
+				return nil, fmt.Errorf("build respond message: %w", err)
 			}
 		default:
 			return nil, fmt.Errorf("empty response in rule")
@@ -133,8 +136,17 @@ func (d *File) Rules(context.Context) ([]discovery.Rule, error) {
 			return discovery.Rule{}, fmt.Errorf("empty URI in rule")
 		}
 
+		result.Name = r.Match.URI
 		if result.Match.URI, err = regexp.Compile(r.Match.URI); err != nil {
-			return discovery.Rule{}, fmt.Errorf("compile regexp: %w", err)
+			return discovery.Rule{}, fmt.Errorf("compile URI regexp: %w", err)
+		}
+
+		result.Match.IncomingMetadata = metadata.New(r.Match.Header)
+
+		if r.Match.Body != nil {
+			if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {
+				return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
+			}
 		}
 
 		if result.Mock, err = parseRespond(r.Respond); err != nil {
@@ -144,22 +156,25 @@ func (d *File) Rules(context.Context) ([]discovery.Rule, error) {
 		return result, nil
 	}
 
-	var rules []discovery.Rule
+	var rules []*discovery.Rule
 	for idx, r := range cfg.Rules {
 		rule, err := parseRule(r)
 		if err != nil {
 			return nil, fmt.Errorf("parse rule #%d: %w", idx, err)
 		}
 
-		rules = append(rules, rule)
+		rules = append(rules, &rule)
 	}
 
 	if cfg.NotMatched != nil {
-		rule := discovery.Rule{Match: discovery.RequestMatcher{URI: regexp.MustCompile(".*")}}
+		rule := discovery.Rule{
+			Name:  "not matched",
+			Match: discovery.RequestMatcher{URI: regexp.MustCompile(".*")},
+		}
 		if rule.Mock, err = parseRespond(*cfg.NotMatched); err != nil {
 			return nil, fmt.Errorf("parse respond: %w", err)
 		}
-		rules = append(rules, rule)
+		rules = append(rules, &rule)
 	}
 
 	return rules, nil

@@ -5,7 +5,7 @@ package com.github.Semior001.groxy.example.mock;
 import "google/protobuf/empty.proto";
 
 service ExampleService {
-  rpc Stub(google.protobuf.Empty) returns (SomeOtherResponse);
+  rpc Stub(StubRequest) returns (SomeOtherResponse);
   rpc Error(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc NotFound(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
@@ -16,6 +16,10 @@ message Dependency {
   string value = 6;
 
   reserved 3, 4, 5;
+}
+
+message StubRequest {
+  string message = 1;
 }
 
 message SomeOtherResponse {
