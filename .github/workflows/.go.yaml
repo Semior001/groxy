@@ -26,7 +26,7 @@ jobs:
         run: |
           go test -v -timeout=100s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
           cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "mock_" > $GITHUB_WORKSPACE/profile.cov
-        working-directory: app
+        working-directory: .
         env:
           TZ: "Asia/Almaty"
           CGO_ENABLED: 0
@@ -35,7 +35,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.54.2
-          working-directory: app
+          working-directory: .
           args: --timeout 5m
           skip-cache: true
           skip-pkg-cache: true
