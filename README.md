@@ -8,24 +8,91 @@
 
 gRoxy is a gRPC mocking server that allows you to mock gRPC services and responses easily by specifying the message content alongside the message definition. gRoxy is designed to be used in development and testing environments to help you test your gRPC clients and services without having to rely on the actual gRPC server.
 
+## installation
+You can install gRoxy using the following command:
+
+```shell
+go install github.com/Semior001/groxy/cmd/groxy@latest
+```
+
+Or you can pull the docker image:
+
+```shell
+docker pull ghcr.io/semior001/groxy:latest
+```
+
+## usage
+
+```
+Usage:
+  groxy [OPTIONS]
+
+Application Options:
+  -a, --addr=                Address to listen on (default: :8080) [$ADDR]
+      --json                 Enable JSON logging [$JSON]
+      --debug                Enable debug mode [$DEBUG]
+
+file:
+      --file.name=           Config file name (default: groxy.yml) [$FILE_NAME]
+      --file.check-interval= Check interval for the config file (default: 3s) [$FILE_CHECK_INTERVAL]
+      --file.delay=          Delay before applying the changes (default: 500ms) [$FILE_DELAY]
+
+Help Options:
+  -h, --help                 Show this help message
+```
+
+### configuration
+gRoxy uses a YAML configuration file to define the rules for the gRPC mocking server. The configuration file consists of the following sections:
+
+| Section     | Description                                                                                                                                                                                          |
+|-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| version     | The version of the configuration file.<br/>The current version is `1`, and any other version will raise an error.                                                                                    |
+| not-matched | The not-matched section contains the default response if the request didn't match to any rule. Not-matched section may contain a request body, or a gRPC status. <br/><br/> See respond type section |
+| rules       | The rules section contains the rules for the gRPC mocking server.                                                                                                                                    |
+
+Rules are defined in the rules section. Each rule consists of the following fields:
+
+| Field            | Required | Description                                                                                                                   |
+|------------------|----------|-------------------------------------------------------------------------------------------------------------------------------|
+| match            | true     | The match section contains the matchers for the request.                                                                      |
+| match.uri        | true     | The URI matcher for the request. The URI matcher is a regular expression that matches the URI of the request.                 |
+| match.header     | optional | a map of headers that should be present in the request.                                                                       |
+| match.body       | optional | The body matcher for the request. This must be a protobuf snippet that defines the request message with values to be matched. |
+| respond          | true     | The respond section contains the response for the request.                                                                    |
+
+The `Respond` section contains the response for the request. The respond section may contain the following fields:
+
+| Field       | Required                   | Description                                                                                                         |
+|-------------|----------------------------|---------------------------------------------------------------------------------------------------------------------|
+| body        | optional                   | The body of the response. This must be a protobuf snippet that defines the response message with values to be sent. |
+| metadata    | optional                   | The metadata to be sent as a response.                                                                              |
+| status      | optional                   | The gRPC status to be sent as a response.                                                                           |
+| status.code | true, if status is present | The gRPC status code to be sent as a response.                                                                      |
+| status.msg  | true, if status is present | The gRPC status message to be sent as a response.                                                                   |
+
+The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
+
+You can also take a look at [examples](_example) for more information.
+
 ## example
+The simplest configuration for a method "Stub" would look like this:
+
 ```yaml
 version: 1
 
-# by default, groxy will respond with the status code INTERNAL and the message "didn't match the request to any rule".
-not-matched:
-  status: { code: "NOT_FOUND", message: "not found" }
-
 rules:
-    # The next rule will respond with a predefined message.
   - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
     respond:
       body: |
         message StubResponse {
-            // this option specifies that the message is a response
-            option              (groxypb.target) = true; 
+            option              (groxypb.target) = true; // this option specifies that the message is a response 
             string message = 1 [(groxypb.value)  = "Hello, World!"];
             int32 code     = 2 [(groxypb.value)  = "200"];
         }
 ```
 
+That's it. You just need to define the response message, mark it as a target response message via the option, and set values via the value option. The response message will be sent to the client when the client calls the "Stub" method. No need for providing protosets, no need for providing the whole set of definitions, just the message you want to send.
+
+More importantly, if your response message contains lots of fields, which are not important for the test, you can just ignore them. gRoxy will leave them empty, and the client will not be able to distinguish between the real server and the mock server. That's ensured by the protobuf's backward compatibility.
+
+Field is backward compatible if it's of the same type and the same number. Names of the fields and messages are not important.
