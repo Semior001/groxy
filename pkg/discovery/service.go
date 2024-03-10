@@ -12,6 +12,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+//go:generate moq -out mock_provider.go -fmt goimports . Provider
+
 // Service provides routing rules for the Service.
 type Service struct {
 	Providers []Provider
