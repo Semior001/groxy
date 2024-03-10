@@ -38,8 +38,7 @@ var opts struct {
 var version = "unknown"
 
 func getVersion() string {
-	bi, ok := debug.ReadBuildInfo()
-	if ok {
+	if bi, ok := debug.ReadBuildInfo(); ok && version == "unknown" {
 		return bi.Main.Version
 	}
 	return version

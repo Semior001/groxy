@@ -183,7 +183,7 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 func (d *File) getModifTime(ctx context.Context) (modif time.Time, ok bool) {
 	fi, err := os.Stat(d.FileName)
 	if err != nil {
-		slog.WarnContext(ctx, "failed to stat file",
+		slog.WarnContext(ctx, "failed to read file",
 			slog.String("file", d.FileName),
 			slogx.Error(err))
 		return time.Time{}, false
