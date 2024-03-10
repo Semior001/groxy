@@ -54,30 +54,23 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
         uses: docker/setup-buildx-action@v1
 
-      - name: login to ghcr
-        id: docker_login
-        if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          logout: false
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: build and deploy master image to ghcr.io and dockerhub
+      - name: login, build and deploy master image to ghcr.io
         if: ${{ github.ref == 'refs/heads/master' }}
         env:
+          GHCR_USERNAME: ${{ github.actor }}
+          GHCR_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REF: ${{ github.ref }}
         run: |
           ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
           echo GITHUB_REF - $ref
+          echo ${GHCR_PASSWORD} | docker login ghcr.io -u ${GHCR_USERNAME} --password-stdin
           docker buildx build --push \
               --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
               --platform linux/amd64,linux/arm64 \
               -t ghcr.io/semior001/groxy:${ref} .
 
-      - name: deploy tagged (latest) to ghcr.io and dockerhub
+      - name: login, build and deploy tagged (latest) to ghcr.io
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         env:
           GITHUB_SHA: ${{ github.sha }}
@@ -85,6 +78,7 @@ jobs:
         run: |
           ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
           echo GITHUB_REF - $ref
+          echo ${GHCR_PASSWORD} | docker login ghcr.io -u ${GHCR_USERNAME} --password-stdin
           docker buildx build --push \
               --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
               --platform linux/amd64,linux/arm64 \
