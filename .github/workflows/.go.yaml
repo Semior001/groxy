@@ -14,13 +14,11 @@ jobs:
       - name: set up go 1.22.0
         uses: actions/setup-go@v4
         id: go
-        with:
-          go-version: 1.22.0
+        with: { go-version: 1.22.0 }
 
       - name: checkout
         uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
+        with: { fetch-depth: 0 }
 
       - name: build and test
         run: |
@@ -31,6 +29,13 @@ jobs:
           TZ: "Asia/Almaty"
           CGO_ENABLED: 0
 
+      - name: install goveralls
+        run: GO111MODULE=off go get -u -v github.com/mattn/goveralls
+
+      - name: submit coverage
+        run: $(go env GOPATH)/bin/goveralls -service="github" -coverprofile=$GITHUB_WORKSPACE/profile.cov
+        env: { COVERALLS_TOKEN: ${ { secrets.GITHUB_TOKEN } } }
+
       - name: run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
@@ -40,16 +45,6 @@ jobs:
           skip-cache: true
           skip-pkg-cache: true
           skip-build-cache: true
-
-      - name: submit coverage to codecov
-        run: |
-          cat $GITHUB_WORKSPACE/profile.cov > $GITHUB_WORKSPACE/coverage.txt
-          cd $GITHUB_WORKSPACE
-          bash <(curl -s https://codecov.io/bash)
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-          GOFLAGS: "-mod=mod"
-          CGO_ENABLED: 0
 
       - name: set up QEMU
         uses: docker/setup-qemu-action@v1
