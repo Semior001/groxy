@@ -19,5 +19,6 @@ message Response {
   Enum enum = 9;
   repeated Nested nesteds = 10;
   map<string, Nested> nested_map = 11;
+  string value = 12;
   reserved 4, 5, 7, 8;
 }

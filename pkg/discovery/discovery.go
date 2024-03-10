@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 )
@@ -24,6 +25,14 @@ type Provider interface {
 
 	// Rules returns the routing rules.
 	Rules(ctx context.Context) ([]*Rule, error)
+}
+
+// Mock contains the details of how the handler should reply to the downstream.
+type Mock struct {
+	Header  metadata.MD
+	Trailer metadata.MD
+	Body    proto.Message
+	Status  *status.Status
 }
 
 // Rule is a routing rule for the Service.

@@ -10,6 +10,7 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
 
 * * *
 
+- [todos](#todos)
 - [installation](#installation)
 - [usage](#usage)
   - [example](#example)
@@ -20,6 +21,9 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
     - [repeated fields](#repeated-fields)
     - [maps](#maps)
 - [project status](#status)
+
+## todos
+- [ ] currently service supports only mocking unary methods, but we plan to support streaming methods as well
 
 ## installation
 You can install gRoxy using the following command:

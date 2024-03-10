@@ -9,7 +9,6 @@ import (
 	"github.com/cappuccinotm/slogx"
 	"github.com/samber/lo"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -77,12 +76,19 @@ func (s *Service) mergeRules(ctx context.Context) []*Rule {
 	return rules
 }
 
-// Mock contains the details of how the handler should reply to the downstream.
-type Mock struct {
-	Header  metadata.MD
-	Trailer metadata.MD
-	Body    proto.Message
-	Status  *status.Status
+// MatchMetadata matches the given gRPC request to an upstream connection.
+func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	var matches Matches
+	for _, r := range s.rules {
+		if r.Match.Matches(uri, md) {
+			matches = append(matches, r)
+		}
+	}
+
+	return matches
 }
 
 // Matches is a set of matches.
@@ -122,19 +128,4 @@ func (m Matches) MatchMessage(bts []byte) (*Rule, bool) {
 	}
 
 	return nil, false
-}
-
-// MatchMetadata matches the given gRPC request to an upstream connection.
-func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var matches Matches
-	for _, r := range s.rules {
-		if r.Match.Matches(uri, md) {
-			matches = append(matches, r)
-		}
-	}
-
-	return matches
 }

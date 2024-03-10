@@ -121,9 +121,10 @@ func TestBuildMessage(t *testing.T) {
 	})
 
 	tests := []struct {
-		name string
-		def  string
-		want proto.Message
+		name    string
+		def     string
+		want    proto.Message
+		wantErr error
 	}{
 		{
 			name: "with nested message, value defined in target",
@@ -195,12 +196,45 @@ func TestBuildMessage(t *testing.T) {
 				{NestedValue: "second"},
 			}},
 		},
+		{
+			name: "zero enum, zero map, zero repeated, zero known field",
+			def: `	enum SomeEnum { EMPTY = 0; }
+					message Nested { string value = 6; }
+					message StubResponse {
+						option (groxypb.target) = true;
+						SomeEnum some_enum = 9;
+						map<string, Nested> map = 11;
+						string value = 12;
+						repeated Nested nested = 10;
+					}`,
+		},
+		{
+			name:    "syntax error",
+			def:     "message StubResponse {",
+			wantErr: errSyntax{Line: 2, Col: 1, Err: "syntax error: unexpected $end"},
+		},
+		{
+			name: "multiple target messages",
+			def: "message StubResponse { option (groxypb.target) = true; } " +
+				"message StubResponse2 { option (groxypb.target) = true; }",
+			wantErr: errMultipleTarget{"StubResponse", "StubResponse2"},
+		},
+		{
+			name:    "no target message",
+			def:     "message StubResponse {}",
+			wantErr: errNoTarget,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := BuildMessage(tt.def)
-			require.NoError(t, err)
-			assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, got))
+			switch {
+			case tt.wantErr == nil:
+				require.NoError(t, err)
+				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, got))
+			default:
+				require.ErrorIs(t, err, tt.wantErr)
+			}
 		})
 	}
 }
@@ -231,6 +265,10 @@ func assertFileDescEqual(t *testing.T, expected protoreflect.FileDescriptor, act
 
 func mustProtoMarshal(t *testing.T, msg proto.Message) []byte {
 	t.Helper()
+
+	if msg == nil {
+		return []byte{}
+	}
 
 	b, err := proto.Marshal(msg)
 	require.NoError(t, err)

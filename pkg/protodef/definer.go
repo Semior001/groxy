@@ -95,9 +95,10 @@ func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
 		var esp reporter.ErrorWithPos
 		if errors.As(err, &esp) {
 			pos := esp.GetPosition()
-			pos.Line -= 3     // sub 3 lines to remove enriched parts
-			pos.Filename = "" // file is placed in tmp, so it's not useful
-			return nil, fmt.Errorf("(%d:%d): %s", pos.Line, pos.Col, esp.Unwrap())
+			return nil, errSyntax{
+				Line: pos.Line - 3, // sub 3 lines to remove enriched parts
+				Col:  pos.Col, Err: esp.Unwrap().Error(),
+			}
 		}
 		return nil, fmt.Errorf("parse protobuf snippet: %w", err)
 	}
@@ -122,10 +123,11 @@ func (b *Definer) findTarget(fd *desc.FileDescriptor) (*desc.MessageDescriptor, 
 
 	switch {
 	case len(targets) == 0:
-		return nil, fmt.Errorf("no target message found")
+		return nil, errNoTarget
 	case len(targets) > 1:
-		return nil, fmt.Errorf("multiple target messages found: %v",
-			lo.Map(targets, func(md *desc.MessageDescriptor, _ int) string { return md.GetName() }))
+		return nil, errMultipleTarget(lo.Map(targets, func(md *desc.MessageDescriptor, _ int) string {
+			return md.GetName()
+		}))
 	default:
 		return targets[0], nil
 	}
@@ -158,12 +160,14 @@ func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor) er
 func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
 	if s == "" {
 		switch {
-		case isMsg(field.GetType()):
+		case field.IsMap():
+			return b.buildMap(field, "{}")
+		case field.IsRepeated():
+			return b.buildRepeated(field, "[]")
+		case isMsg(field.GetType()): // repeated and map is just a repeated message
 			return b.buildMessage(field.GetMessageType())
 		case isEnum(field.GetType()):
 			return int32(0), nil
-		case field.IsRepeated(), field.IsMap():
-			return nil, nil
 		default:
 			zeroVal, ok := types[field.GetType()]
 			if !ok {
