@@ -17,13 +17,24 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+//go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
+
+// ServerStream is a gRPC server stream.
+type ServerStream grpc.ServerStream
+
+// Matcher matches the request URI and incoming metadata to the
+// registered rules.
+type Matcher interface {
+	MatchMetadata(string, metadata.MD) discovery.Matches
+}
+
 // Server is a gRPC server.
 type Server struct {
 	version string
 
 	serverOpts       []grpc.ServerOption
 	defaultResponder func(stream grpc.ServerStream, firstRecv []byte) error
-	matcher          *discovery.Service
+	matcher          Matcher
 
 	debug bool
 	l     net.Listener
@@ -31,7 +42,7 @@ type Server struct {
 }
 
 // NewServer creates a new server.
-func NewServer(m *discovery.Service, opts ...Option) *Server {
+func NewServer(m Matcher, opts ...Option) *Server {
 	s := &Server{
 		matcher: m,
 		defaultResponder: func(_ grpc.ServerStream, _ []byte) error {

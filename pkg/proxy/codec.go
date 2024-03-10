@@ -6,8 +6,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// RawBytesCodec sets the received bytes as is to the target,
-// which must always be a pointer to a byte slice.
+// RawBytesCodec sets the received bytes as-is to the target,
+// whether it is a byte slice or a proto.Message.
+// For proto.Message, it uses proto.Marshal and proto.Unmarshal.
 type RawBytesCodec struct{}
 
 // Marshal returns the received byte slice as is.

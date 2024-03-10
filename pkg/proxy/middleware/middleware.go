@@ -28,8 +28,6 @@ func Chain(base grpc.StreamHandler, mws ...Middleware) grpc.StreamHandler {
 func AppInfo(app, author, version string) Middleware {
 	return func(next grpc.StreamHandler) grpc.StreamHandler {
 		return func(srv any, stream grpc.ServerStream) error {
-			ctx := stream.Context()
-
 			md := metadata.Pairs(
 				"app", app,
 				"author", author,
@@ -37,7 +35,7 @@ func AppInfo(app, author, version string) Middleware {
 			)
 
 			if err := stream.SetHeader(md); err != nil {
-				slog.WarnContext(ctx, "failed to send app info", slogx.Error(err))
+				slog.WarnContext(stream.Context(), "failed to send app info", slogx.Error(err))
 			}
 
 			return next(srv, stream)
