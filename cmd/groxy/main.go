@@ -19,6 +19,8 @@ import (
 	"github.com/cappuccinotm/slogx"
 	"github.com/cappuccinotm/slogx/slogm"
 	"github.com/jessevdk/go-flags"
+	"github.com/lmittmann/tint"
+	"github.com/mattn/go-isatty"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -29,6 +31,7 @@ var opts struct {
 		CheckInterval time.Duration `long:"check-interval" env:"CHECK_INTERVAL" default:"3s"        description:"Check interval for the config file"`
 		Delay         time.Duration `long:"delay"          env:"DELAY"          default:"500ms"     description:"Delay before applying the changes" `
 	} `group:"file" namespace:"file" env-namespace:"FILE"`
+	JSON  bool `long:"json" env:"JSON" description:"Enable JSON logging"`
 	Debug bool `long:"debug" env:"DEBUG" description:"Enable debug mode"`
 }
 
@@ -49,7 +52,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog(opts.Debug)
+	setupLog(opts.Debug, opts.JSON)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() { // catch signal and invoke graceful termination
@@ -63,35 +66,6 @@ func main() {
 	if err := run(ctx); err != nil {
 		slog.Error("failed to start groxy", slogx.Error(err))
 	}
-}
-
-func setupLog(debug bool) {
-	defer slog.Info("prepared logger", slog.Bool("debug", debug))
-	handlerOpts := &slog.HandlerOptions{Level: slog.LevelInfo}
-	handler := slog.Handler(slog.NewJSONHandler(os.Stderr, handlerOpts))
-
-	if debug {
-		handlerOpts.Level = slog.LevelDebug
-		handlerOpts.AddSource = true
-		handlerOpts.ReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
-			// shorten source to just file:line
-			if a.Key == slog.SourceKey {
-				src := a.Value.Any().(*slog.Source)
-				file := src.File[strings.LastIndex(src.File, "/")+1:]
-				return slog.String("s", fmt.Sprintf("%s:%d", file, src.Line))
-			}
-			return a
-		}
-		handler = slog.NewTextHandler(os.Stderr, handlerOpts)
-	}
-
-	handler = slogx.NewChain(handler,
-		slogm.RequestID(),
-		slogm.StacktraceOnError(),
-		slogm.TrimAttrs(1024), // 1Kb
-	)
-
-	slog.SetDefault(slog.New(handler))
 }
 
 func run(ctx context.Context) error {
@@ -128,4 +102,63 @@ func run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func setupLog(debug, json bool) {
+	defer slog.Info("prepared logger", slog.Bool("debug", debug), slog.Bool("json", json))
+
+	tintOpts := func(opts *slog.HandlerOptions, timeFormat string) *tint.Options {
+		return &tint.Options{
+			AddSource:   opts.AddSource,
+			Level:       opts.Level,
+			ReplaceAttr: opts.ReplaceAttr,
+			TimeFormat:  timeFormat,
+			NoColor:     !isatty.IsTerminal(os.Stderr.Fd()),
+		}
+	}
+
+	timeFormat := time.DateTime
+	handlerOpts := &slog.HandlerOptions{Level: slog.LevelInfo}
+	if debug {
+		timeFormat = time.RFC3339Nano
+		handlerOpts.Level = slog.LevelDebug
+		handlerOpts.AddSource = true
+		handlerOpts.ReplaceAttr = func(_ []string, a slog.Attr) slog.Attr {
+			if a.Key != slog.SourceKey {
+				return a
+			}
+			// shorten source to just file:line and trim or extend to 15 characters
+			src := a.Value.Any().(*slog.Source)
+			file := src.File[strings.LastIndex(src.File, "/")+1:]
+
+			s := fmt.Sprintf("%s:%d", file, src.Line)
+			if json {
+				return slog.String("s", s)
+			}
+
+			switch {
+			case len(s) > 15:
+				return slog.String("s", s[:15])
+			case len(s) < 15:
+				return slog.String("s", s+strings.Repeat(" ", 15-len(s)))
+			default:
+				return slog.String("s", s)
+			}
+		}
+	}
+
+	var handler slog.Handler
+	if json {
+		handler = slog.NewJSONHandler(os.Stderr, handlerOpts)
+	} else {
+		handler = tint.NewHandler(os.Stderr, tintOpts(handlerOpts, timeFormat))
+	}
+
+	handler = slogx.NewChain(handler,
+		slogm.RequestID(),
+		slogm.StacktraceOnError(),
+		slogm.TrimAttrs(1024), // 1Kb
+	)
+
+	slog.SetDefault(slog.New(handler))
 }

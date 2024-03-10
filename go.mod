@@ -5,9 +5,10 @@ go 1.22.0
 require (
 	github.com/bufbuild/protocompile v0.8.0
 	github.com/cappuccinotm/slogx v1.3.0
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/jhump/protoreflect v1.15.6
+	github.com/lmittmann/tint v1.0.4
+	github.com/mattn/go-isatty v0.0.20
 	github.com/samber/lo v1.39.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/sync v0.6.0
@@ -17,7 +18,6 @@ require (
 )
 
 require (
-	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect

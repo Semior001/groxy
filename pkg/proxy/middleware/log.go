@@ -33,7 +33,7 @@ func Log(next grpc.StreamHandler) grpc.StreamHandler {
 			}
 
 			slog.InfoContext(ctx, "request",
-				slog.String("method", mtd),
+				slog.String("uri", mtd),
 				slog.String("remote", pi.Addr.String()),
 				slog.Duration("elapsed", elapsed),
 				slog.Int("recv_count", ss.recvCount),

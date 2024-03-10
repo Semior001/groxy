@@ -8,8 +8,7 @@ rules:
     # The next rule will respond with a predefined message.
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
-      header:
-        test: true
+      header: { test: true }
       body: |
         message StubRequest {
             option (groxypb.target) = true; 
@@ -27,12 +26,10 @@ rules:
     # The next rule will respond with a predefined message.
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
-      header:
-        test: true
       body: |
         message StubRequest {
             option (groxypb.target) = true; 
-            string message = 1 [(groxypb.value)  = "some other needed value"];
+            string message = 1 [(groxypb.value)  = "needed value"];
         }
     respond:
       body: |
