@@ -74,7 +74,7 @@ jobs:
           echo GITHUB_REF - $ref
           docker buildx build --push \
               --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
-              --platform linux/amd64,linux/arm/v7,linux/arm64 \
+              --platform linux/amd64,linux/arm64 \
               -t ghcr.io/semior001/groxy:${ref} .
 
       - name: deploy tagged (latest) to ghcr.io and dockerhub
@@ -87,5 +87,5 @@ jobs:
           echo GITHUB_REF - $ref
           docker buildx build --push \
               --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
-              --platform linux/amd64,linux/arm/v7,linux/arm64 \
+              --platform linux/amd64,linux/arm64 \
               -t ghcr.io/semior001/groxy:${ref} -t ghcr.io/semior001/groxy:latest .
