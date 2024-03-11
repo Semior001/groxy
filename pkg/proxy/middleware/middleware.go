@@ -44,31 +44,33 @@ func AppInfo(app, author, version string) Middleware {
 }
 
 // Recoverer is a middleware that recovers from panics, logs the panic and returns a gRPC error if possible.
-func Recoverer(next grpc.StreamHandler) grpc.StreamHandler {
-	return func(srv any, stream grpc.ServerStream) (err error) {
-		defer func() {
-			if rvr := recover(); rvr != nil {
-				ctx := stream.Context()
+func Recoverer() Middleware {
+	return func(next grpc.StreamHandler) grpc.StreamHandler {
+		return func(srv any, stream grpc.ServerStream) (err error) {
+			defer func() {
+				if rvr := recover(); rvr != nil {
+					ctx := stream.Context()
 
-				mtd, ok := grpc.Method(ctx)
-				if !ok {
-					mtd = "unknown"
+					mtd, ok := grpc.Method(ctx)
+					if !ok {
+						mtd = "unknown"
+					}
+
+					pi, ok := peer.FromContext(ctx)
+					if !ok {
+						pi = &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4zero}}
+					}
+
+					slog.ErrorContext(ctx, "stream panic",
+						slog.String("method", mtd),
+						slog.String("remote", pi.Addr.String()),
+						slog.Any("panic", rvr),
+						slogx.Error(err))
+
+					err = status.Error(codes.ResourceExhausted, "{groxy} panic")
 				}
-
-				pi, ok := peer.FromContext(ctx)
-				if !ok {
-					pi = &peer.Peer{Addr: &net.IPAddr{IP: net.IPv4zero}}
-				}
-
-				slog.ErrorContext(ctx, "stream panic",
-					slog.String("method", mtd),
-					slog.String("remote", pi.Addr.String()),
-					slog.Any("panic", rvr),
-					slogx.Error(err))
-
-				err = status.Error(codes.ResourceExhausted, "{groxy} panic")
-			}
-		}()
-		return next(srv, stream)
+			}()
+			return next(srv, stream)
+		}
 	}
 }

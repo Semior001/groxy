@@ -65,7 +65,7 @@ func (s *Server) Listen(addr string) (err error) {
 
 	s.grpc = grpc.NewServer(append(s.serverOpts,
 		grpc.UnknownServiceHandler(middleware.Chain(s.handle,
-			middleware.Recoverer,
+			middleware.Recoverer(),
 			middleware.AppInfo("groxy", "Semior001", s.version),
 			middleware.Log(s.debug),
 		)),

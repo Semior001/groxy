@@ -14,7 +14,7 @@ import (
 )
 
 // Log logs the gRPC requests.
-func Log(debug bool) func(next grpc.StreamHandler) grpc.StreamHandler {
+func Log(debug bool) Middleware {
 	return func(next grpc.StreamHandler) grpc.StreamHandler {
 		return func(srv any, stream grpc.ServerStream) (err error) {
 			ctx := stream.Context()
