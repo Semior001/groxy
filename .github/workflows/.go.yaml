@@ -64,6 +64,8 @@ jobs:
         if: ${{ github.ref == 'refs/heads/master' }}
         uses: docker/build-push-action@v5
         with:
+          context: ${{ github.workspace }}
+          file: ${{ github.workspace }}/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           tags: ghcr.io/semior001/groxy:master,ghcr.io/semior001/groxy:${{ github.sha }}
@@ -72,6 +74,8 @@ jobs:
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v5
         with:
+          context: ${{ github.workspace }}
+          file: ${{ github.workspace }}/Dockerfile
           push: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64
           tags: ghcr.io/semior001/groxy:latest,ghcr.io/semior001/groxy:${{ github.ref }}
