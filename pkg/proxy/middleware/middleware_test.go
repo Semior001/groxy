@@ -38,7 +38,7 @@ func TestAppInfo(t *testing.T) {
 func TestRecoverer(t *testing.T) {
 	bts := bytes.NewBuffer(nil)
 	slog.SetDefault(slog.New(slog.NewTextHandler(bts, &slog.HandlerOptions{})))
-	mw := Recoverer(func(_ any, _ grpc.ServerStream) error { panic("test") })
+	mw := Recoverer()(func(_ any, _ grpc.ServerStream) error { panic("test") })
 	var err error
 	require.NotPanics(t, func() {
 		err = mw(nil, &mocks.ServerStreamMock{
