@@ -54,7 +54,7 @@ jobs:
 
       - name: login to ghcr
         if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -62,34 +62,46 @@ jobs:
 
       - name: login to dockerhub
         if: ${{ github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/') }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: semior
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: build and deploy master image to ghcr.io
+      - name: build and push master image to ghcr.io
         if: ${{ github.ref == 'refs/heads/master' }}
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
-          echo GITHUB_REF - $ref
-          docker buildx build --push \
-              --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
-              --platform linux/amd64,linux/arm64 \
-              -t ghcr.io/semior001/groxy:${ref} -t semior/groxy:${ref} .
+        uses: docker/build-push-action@v5
+        continue-on-error: true
+        with:
+          push: true
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ghcr.io/semior001/groxy:latest,ghcr.io/semior001/groxy:${{github.sha}}
 
-      - name: build and deploy tagged (latest) image to ghcr.io
+      - name: build and push master image to dockerhub
+        if: ${{ github.ref == 'refs/heads/master' }}
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: semior/groxy:latest,semior/groxy:${{github.sha}}
+
+      - name: build and push tagged (latest) image to ghcr.io
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        env:
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          ref="$(echo ${GITHUB_REF} | cut -d'/' -f3)"
-          echo GITHUB_REF - $ref
-          docker buildx build --push \
-              --build-arg CI=github --build-arg GITHUB_SHA=${GITHUB_SHA} --build-arg GIT_BRANCH=${ref} \
-              --platform linux/amd64,linux/arm64 \
-              -t ghcr.io/semior001/groxy:${ref} -t ghcr.io/semior001/groxy:latest .
-              -t semior/groxy:${ref} -t semior/groxy:latest .
+        uses: docker/build-push-action@v5
+        continue-on-error: true
+        with:
+          push: true
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: ghcr.io/semior001/groxy:latest,ghcr.io/semior001/groxy:${{github.sha}}
+
+      - name: build and push tagged (latest) image to dockerhub
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: docker_build
+        uses: docker/build-push-action@v5
+        with:
+          push: true
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          tags: semior/groxy:latest,semior/groxy:${{github.sha}}
