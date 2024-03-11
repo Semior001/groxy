@@ -32,10 +32,16 @@ You can install gRoxy using the following command:
 go install github.com/Semior001/groxy/cmd/groxy@latest
 ```
 
-Or you can pull the docker image:
+Or you can pull the docker image from ghcr.io:
 
 ```shell
 docker pull ghcr.io/semior001/groxy:latest
+```
+
+Or from the docker hub:
+
+```shell
+docker pull semior/groxy:latest
 ```
 
 ## usage
