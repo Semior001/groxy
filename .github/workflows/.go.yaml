@@ -63,18 +63,14 @@ jobs:
       - name: build and deploy master image to ghcr
         if: ${{ github.ref == 'refs/heads/master' }}
         uses: docker/build-push-action@v5
-        env:
-          GITHUB_SHA: ${{ github.sha }}
         with:
           push: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64
-          tags: ghcr.io/semior001/groxy:master,ghcr.io/semior001/groxy:$GITHUB_SHA
+          tags: ghcr.io/semior001/groxy:master,ghcr.io/semior001/groxy:${{ github.sha }}
 
       - name: build and deploy tagged (latest) image to ghcr
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v5
-        env:
-          GITHUB_SHA: ${{ github.sha }}
         with:
           push: true
           platforms: linux/amd64,linux/arm/v7,linux/arm64
