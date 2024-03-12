@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"gopkg.in/yaml.v3"
 )
 
@@ -112,8 +113,21 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 		}
 
 		switch {
-		case r.Status != nil && r.Body != nil:
-			return nil, fmt.Errorf("can't set both status and body in rule")
+		case r.Status != nil && r.Body != nil || r.Stream != nil && r.Body != nil || r.Status != nil && r.Stream != nil:
+			return nil, fmt.Errorf("can't set have multiple response variants in rule")
+		case r.Stream != nil:
+			tmpl, err := protodef.BuildMessage(r.Stream.Def)
+			if err != nil {
+				return nil, fmt.Errorf("parse stream message template: %w", err)
+			}
+
+			for _, v := range r.Stream.Values {
+				msg, err := protodef.SetValues(tmpl, v)
+				if err != nil {
+					return nil, fmt.Errorf("set values to stream message: %w", err)
+				}
+				result.Messages = append(result.Messages, msg)
+			}
 		case r.Status != nil:
 			var code codes.Code
 			if err = code.UnmarshalJSON([]byte(fmt.Sprintf("%q", r.Status.Code))); err != nil {
@@ -121,13 +135,14 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 			}
 			result.Status = status.New(code, r.Status.Message)
 		case r.Body != nil:
-			if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
+			msg, err := protodef.BuildMessage(*r.Body)
+			if err != nil {
 				return nil, fmt.Errorf("build respond message: %w", err)
 			}
+			result.Messages = []proto.Message{msg}
 		default:
 			return nil, fmt.Errorf("empty response in rule")
 		}
-
 		return result, nil
 	}
 

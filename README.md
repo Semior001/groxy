@@ -112,13 +112,16 @@ Rules are defined in the rules section. Each rule consists of the following fiel
 
 The `Respond` section contains the response for the request. The respond section may contain the following fields:
 
-| Field       | Required                   | Description                                                                                                         |
-|-------------|----------------------------|---------------------------------------------------------------------------------------------------------------------|
-| body        | optional                   | The body of the response. This must be a protobuf snippet that defines the response message with values to be sent. |
-| metadata    | optional                   | The metadata to be sent as a response.                                                                              |
-| status      | optional                   | The gRPC status to be sent as a response.                                                                           |
-| status.code | true, if status is present | The gRPC status code to be sent as a response.                                                                      |
-| status.msg  | true, if status is present | The gRPC status message to be sent as a response.                                                                   |
+| Field         | Required                   | Description                                                                                                                     |
+|---------------|----------------------------|---------------------------------------------------------------------------------------------------------------------------------|
+| stream        | optional                   | The stream of responses to be sent as a response.                                                                               |
+| stream.def    | true, if stream is present | The stream definition of the response message.                                                                                  |
+| stream.values | optional                   | Values of the stream message to be sent to the client. Values are just a set of YAML-specified fields, i.e. `[]map[string]any`. |
+| body          | optional                   | The body of the response. This must be a protobuf snippet that defines the response message with values to be sent.             |
+| metadata      | optional                   | The metadata to be sent as a response.                                                                                          |
+| status        | optional                   | The gRPC status to be sent as a response.                                                                                       |
+| status.code   | true, if status is present | The gRPC status code to be sent as a response.                                                                                  |
+| status.msg    | true, if status is present | The gRPC status message to be sent as a response.                                                                               |
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 
