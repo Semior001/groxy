@@ -211,7 +211,7 @@ func TestBuildMessage(t *testing.T) {
 		{
 			name:    "syntax error",
 			def:     "message StubResponse {",
-			wantErr: errSyntax{Line: 2, Col: 1, Err: "syntax error: unexpected $end"},
+			wantErr: errSyntax{Line: 1, Col: 23, Err: "syntax error: unexpected $end"},
 		},
 		{
 			name: "multiple target messages",
