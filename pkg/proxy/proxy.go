@@ -129,6 +129,8 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {
 	ctx := stream.Context()
 
+	slog.DebugContext(ctx, "mocking", slog.String("reply", reply.String()))
+
 	if len(reply.Header) > 0 {
 		if err := stream.SetHeader(reply.Header); err != nil {
 			slog.WarnContext(ctx, "failed to set header to the client", slogx.Error(err))
@@ -140,9 +142,11 @@ func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {
 	}
 
 	switch {
-	case reply.Body != nil:
-		if err := stream.SendMsg(reply.Body); err != nil {
-			return status.Errorf(codes.Internal, "{groxy} failed to send message: %v", err)
+	case len(reply.Messages) > 0:
+		for _, msg := range reply.Messages {
+			if err := stream.SendMsg(msg); err != nil {
+				return status.Errorf(codes.Internal, "{groxy} failed to send message: %v", err)
+			}
 		}
 	case reply.Status != nil:
 		return reply.Status.Err()

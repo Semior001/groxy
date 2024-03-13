@@ -3,15 +3,13 @@ package discovery
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"slices"
-	"strconv"
-	"strings"
 
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/protoadapt"
 )
 
 // Provider provides routing rules for the Service.
@@ -29,10 +27,16 @@ type Provider interface {
 
 // Mock contains the details of how the handler should reply to the downstream.
 type Mock struct {
-	Header  metadata.MD
-	Trailer metadata.MD
-	Body    proto.Message
-	Status  *status.Status
+	Header   metadata.MD
+	Trailer  metadata.MD
+	Messages []proto.Message
+	Status   *status.Status
+}
+
+// String returns the string representation of the mock.
+func (m Mock) String() string {
+	return fmt.Sprintf("mock{header: %d; trailer: %d; messages: %d; status: %q}",
+		len(m.Header), len(m.Trailer), len(m.Messages), m.Status)
 }
 
 // Rule is a routing rule for the Service.
@@ -49,21 +53,7 @@ type Rule struct {
 }
 
 // String returns the name of the rule.
-func (r *Rule) String() string {
-	sb := &strings.Builder{}
-	_, _ = sb.WriteString("(")
-	_, _ = sb.WriteString(r.Name)
-	_, _ = sb.WriteString("; ")
-	_, _ = sb.WriteString(strconv.Itoa(len(r.Match.IncomingMetadata)))
-	_, _ = sb.WriteString(" metadata")
-	if r.Match.Message != nil {
-		_, _ = sb.WriteString("; with body: {")
-		_, _ = sb.WriteString(protoadapt.MessageV1Of(r.Match.Message).String())
-		_, _ = sb.WriteString("}")
-	}
-	_, _ = sb.WriteString(")")
-	return sb.String()
-}
+func (r *Rule) String() string { return fmt.Sprintf("rule{name: %s}", r.Name) }
 
 // RequestMatcher defines parameters to match the request to the rule.
 type RequestMatcher struct {

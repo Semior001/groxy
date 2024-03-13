@@ -12,20 +12,27 @@ type Rule struct {
 	Match struct {
 		URI    string            `yaml:"uri"`
 		Header map[string]string `yaml:"header"`
-		Body   *string           `yaml:"body"`
+		Body   *string           `yaml:"body,omitempty"`
 	} `yaml:"match"`
 	Respond Respond `yaml:"respond"`
 }
 
+// Values is an arbitrary structure.
+type Values map[string]interface{}
+
 // Respond specifies how the service should respond to the request.
 type Respond struct {
-	Body     *string `yaml:"body"`
+	Stream *struct {
+		Def    string   `yaml:"def"`
+		Values []Values `yaml:"values"`
+	} `yaml:"stream"`
+	Body     *string `yaml:"body,omitempty"`
 	Metadata *struct {
 		Header  map[string]string `yaml:"header"`
 		Trailer map[string]string `yaml:"trailer"`
-	} `yaml:"metadata"`
+	} `yaml:"metadata,omitempty"`
 	Status *struct {
 		Code    string `yaml:"code"`
 		Message string `yaml:"message"`
-	} `yaml:"status"`
+	} `yaml:"status,omitempty"`
 }

@@ -8,6 +8,7 @@ service ExampleService {
   rpc Stub(StubRequest) returns (SomeOtherResponse);
   rpc Error(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc NotFound(google.protobuf.Empty) returns (google.protobuf.Empty);
+  rpc ServerStream(google.protobuf.Empty) returns (stream SomeOtherResponse);
 }
 
 message Dependency {

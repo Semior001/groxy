@@ -5,6 +5,16 @@ not-matched:
   status: { code: "NOT_FOUND", message: "some custom not found" }
 
 rules:
+    # next method is an example of server streaming
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/ServerStream" }
+    respond:
+      stream:
+        def: "message ServerStreamResponse { option (groxypb.target) = true; string message = 1; }"
+        values:
+          - message: "first message"
+          - message: "second message"
+          - message: "third message"
+
     # The next rule will respond with a predefined message.
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"

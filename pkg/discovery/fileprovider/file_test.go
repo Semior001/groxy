@@ -78,16 +78,16 @@ func TestFile_Rules(t *testing.T) {
 
 	require.Len(t, rules, 5)
 	assert.NotNil(t, rules[0].Match.Message)
-	assert.NotNil(t, rules[0].Mock.Body)
+	assert.NotNil(t, rules[0].Mock.Messages)
 	assert.NotNil(t, rules[1].Match.Message)
-	assert.NotNil(t, rules[1].Mock.Body)
-	assert.NotNil(t, rules[2].Mock.Body)
+	assert.NotNil(t, rules[1].Mock.Messages)
+	assert.NotNil(t, rules[2].Mock.Messages)
 
 	rules[0].Match.Message = nil
-	rules[0].Mock.Body = nil
+	rules[0].Mock.Messages = nil
 	rules[1].Match.Message = nil
-	rules[1].Mock.Body = nil
-	rules[2].Mock.Body = nil
+	rules[1].Mock.Messages = nil
+	rules[2].Mock.Messages = nil
 
 	assert.Equal(t, []*discovery.Rule{
 		{
