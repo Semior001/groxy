@@ -46,12 +46,19 @@ rules:
       body: |
         message Dependency {
             string some_dependant_value = 6;
+            bool   some_dependant_bool  = 7;
+            string some_rich_text       = 8;
         }
         
         message StubResponse {
             // this option specifies that the message is a response
             option (groxypb.target) = true; 
-            Dependency dependency = 3 [(groxypb.value)  = '{"some_dependant_value": "Hello, World!"}'];
+        
+            Dependency dependency = 3 [(groxypb.value)  = `{
+                "some_dependant_value": "some value",
+                "some_dependant_bool":  true,
+                "some_rich_text":       "some text"
+            }`];
         }
 
     # The next rule will respond with an error message.

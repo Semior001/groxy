@@ -136,6 +136,19 @@ func TestBuildMessage(t *testing.T) {
 			want: &testdata.Response{Nested: &testdata.Nested{NestedValue: "Hello, World!"}},
 		},
 		{
+			name: "with nested message, value defined in target",
+			def:  testdata.String(t, "multiline.txt"),
+			want: &testdata.Response{Nested: &testdata.Nested{
+				Enum:        testdata.Enum_STUB_ENUM_FIRST,
+				NestedValue: "Hello, World!",
+			}},
+		},
+		{
+			name:    "with nested message, value defined in target",
+			def:     testdata.String(t, "multiline_not_closed.txt"),
+			wantErr: errUnclosedMultilineString{Line: 16, Col: 42},
+		},
+		{
 			name: "with nested message, value defined in target AND in message type, target value has priority",
 			def: `	message Nested { 
 						string value = 6 [(groxypb.value) = 'Hello, World!'];

@@ -136,6 +136,27 @@ message SomeMessage {
 }
 ```
 
+#### multiline strings
+protobuf itself doesn't support multiline strings, so gRoxy introduces it's own syntax for them in order to allow to specify complex values in `groxypb.value` option. Multiline strings should be enclosed in triple backticks:
+```protobuf
+message Dependency {
+  string field1 = 1;
+  int32  field2 = 2;
+  bool   field3 = 3;
+}
+
+message SomeMessage {
+    option              (groxypb.target) = true; 
+    string message = 1 [(groxypb.value) = `Hello, 
+    World!`];
+    Dependency dependency = 2 [(groxypb.value) = `{
+        "field1": "value1",
+        "field2": 2,
+        "field3": true
+    }`];
+}
+```
+
 #### nested messages
 In case of nested messages, there are two options how to set values:
 1. Set the value in the nested message:
@@ -156,7 +177,7 @@ message NestedMessage {
 message SomeMessage {
     option                    (groxypb.target) = true; 
     string parent_value = 1  [(groxypb.value) = "parent"];
-    NestedMessage nested = 2 [(groxypb.value) = "{\"nested_value\": \"nested\"}"];
+    NestedMessage nested = 2 [(groxypb.value) = '{"nested_value": "nested"}'];
 }
 ```
 
