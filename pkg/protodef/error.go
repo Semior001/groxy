@@ -29,3 +29,12 @@ type errSyntax struct {
 func (e errSyntax) Error() string {
 	return fmt.Sprintf("(%d:%d) %s", e.Line, e.Col, e.Err)
 }
+
+type errUnclosedMultilineString struct {
+	Line int
+	Col  int
+}
+
+func (e errUnclosedMultilineString) Error() string {
+	return fmt.Sprintf("(%d:%d) unclosed multiline string", e.Line, e.Col)
+}

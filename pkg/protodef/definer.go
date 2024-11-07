@@ -41,6 +41,11 @@ func NewDefiner(opts ...Option) *Definer {
 // BuildTarget seeks the target message in the given protobuf snippet and
 // returns a proto.Message that can be used to respond requests or match requests to.
 func (b *Definer) BuildTarget(def string) (proto.Message, error) {
+	def, err := b.joinMultilineStrings(def)
+	if err != nil {
+		return nil, fmt.Errorf("invalid file: %w", err)
+	}
+
 	def = b.enrich(def)
 
 	fd, err := b.parseDefinition(def)
@@ -59,6 +64,59 @@ func (b *Definer) BuildTarget(def string) (proto.Message, error) {
 	}
 
 	return protoadapt.MessageV2Of(msg), nil
+}
+
+// joinMultilineStrings replaces the multiline strings enclosed in "`" symbol into
+// a single line string, enclosed in double quotes, with escaped newlines, tabs,
+// and double quotes.
+func (b *Definer) joinMultilineStrings(def string) (string, error) {
+	var sb strings.Builder
+
+	type pos struct{ Line, Col int }
+	curr, backtickStart := pos{Line: 1}, pos{}
+
+	countPos := func(r rune) {
+		if r != '\n' {
+			curr.Col++
+			return
+		}
+
+		curr.Line++
+		curr.Col = 0
+	}
+
+	inMultiline := false
+	for _, r := range def {
+		countPos(r)
+
+		switch {
+		case r == '`':
+			if !inMultiline {
+				backtickStart = curr
+			}
+			inMultiline = !inMultiline
+			_, _ = sb.WriteRune('"')
+		case inMultiline:
+			switch r {
+			case '\n':
+				_, _ = sb.WriteString(`\n`)
+			case '\t':
+				_, _ = sb.WriteString(`\t`)
+			case '"':
+				_, _ = sb.WriteString(`\"`)
+			default:
+				_, _ = sb.WriteRune(r)
+			}
+		default:
+			_, _ = sb.WriteRune(r)
+		}
+	}
+
+	if inMultiline {
+		return "", errUnclosedMultilineString(backtickStart)
+	}
+
+	return sb.String(), nil
 }
 
 func (b *Definer) enrich(def string) string {
@@ -335,7 +393,20 @@ var types = map[descriptorpb.FieldDescriptorProto_Type]any{
 	descriptorpb.FieldDescriptorProto_TYPE_SINT64:   int64(0),
 }
 
+func floatparser(_ fieldDescriptor, s string) (any, error) {
+	return strconv.ParseFloat(s, 64)
+}
+
+func intparser(_ fieldDescriptor, s string) (any, error) {
+	return strconv.ParseInt(s, 10, 64)
+}
+
+func uintparser(_ fieldDescriptor, s string) (any, error) {
+	return strconv.ParseUint(s, 10, 64)
+}
+
 var parsers = map[descriptorpb.FieldDescriptorProto_Type]func(fd fieldDescriptor, s string) (any, error){
+	descriptorpb.FieldDescriptorProto_TYPE_STRING: func(_ fieldDescriptor, s string) (any, error) { return s, nil },
 	descriptorpb.FieldDescriptorProto_TYPE_MESSAGE: func(fd fieldDescriptor, s string) (any, error) {
 		msg := dynamic.NewMessage(fd.GetMessageType())
 		if err := msg.UnmarshalJSON([]byte(s)); err != nil {
@@ -351,24 +422,28 @@ var parsers = map[descriptorpb.FieldDescriptorProto_Type]func(fd fieldDescriptor
 		return nil, fmt.Errorf("unknown enum value: %s", s)
 	},
 
-	descriptorpb.FieldDescriptorProto_TYPE_STRING: func(_ fieldDescriptor, s string) (any, error) { return s, nil },
-	descriptorpb.FieldDescriptorProto_TYPE_BYTES:  func(_ fieldDescriptor, s string) (any, error) { return base64.StdEncoding.DecodeString(s) },
-	descriptorpb.FieldDescriptorProto_TYPE_BOOL:   func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseBool(s) },
+	descriptorpb.FieldDescriptorProto_TYPE_BYTES: func(_ fieldDescriptor, s string) (any, error) {
+		return base64.StdEncoding.DecodeString(s)
+	},
 
-	descriptorpb.FieldDescriptorProto_TYPE_DOUBLE: func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseFloat(s, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_FLOAT:  func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseFloat(s, 64) },
+	descriptorpb.FieldDescriptorProto_TYPE_BOOL: func(_ fieldDescriptor, s string) (any, error) {
+		return strconv.ParseBool(s)
+	},
 
-	descriptorpb.FieldDescriptorProto_TYPE_INT64:    func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_INT32:    func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_FIXED64:  func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_FIXED32:  func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_SFIXED32: func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_SFIXED64: func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_SINT32:   func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_SINT64:   func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseInt(s, 10, 64) },
+	descriptorpb.FieldDescriptorProto_TYPE_DOUBLE: floatparser,
+	descriptorpb.FieldDescriptorProto_TYPE_FLOAT:  floatparser,
 
-	descriptorpb.FieldDescriptorProto_TYPE_UINT32: func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseUint(s, 10, 64) },
-	descriptorpb.FieldDescriptorProto_TYPE_UINT64: func(_ fieldDescriptor, s string) (any, error) { return strconv.ParseUint(s, 10, 64) },
+	descriptorpb.FieldDescriptorProto_TYPE_INT64:    intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_INT32:    intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_FIXED64:  intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_FIXED32:  intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_SFIXED32: intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_SFIXED64: intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_SINT32:   intparser,
+	descriptorpb.FieldDescriptorProto_TYPE_SINT64:   intparser,
+
+	descriptorpb.FieldDescriptorProto_TYPE_UINT32: uintparser,
+	descriptorpb.FieldDescriptorProto_TYPE_UINT64: uintparser,
 }
 
 // fieldDescriptor is an interface that allows to mock the desc.FieldDescriptor

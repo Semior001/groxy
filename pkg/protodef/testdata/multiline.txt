@@ -1,0 +1,20 @@
+enum Enum {
+  STUB_ENUM_UNSPECIFIED = 0;
+  STUB_ENUM_FIRST = 1;
+  STUB_ENUM_SECOND = 2;
+}
+
+message Nested {
+  Enum enum = 1;
+  string value = 6;
+}
+
+message StubResponse {
+    option (groxypb.target) = true;
+
+    // next line contains a start of a multiline string
+    Nested nested = 3 [(groxypb.value) = `{
+        "enum":  "STUB_ENUM_FIRST",
+        "value": "Hello, World!"
+    }`];
+}
