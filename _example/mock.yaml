@@ -4,6 +4,17 @@ version: 1
 not-matched:
   status: { code: "NOT_FOUND", message: "some custom not found" }
 
+upstreams:
+  - name: "example-1"
+    address: "localhost:50051"
+    tls: false
+    serve-reflection: true
+
+  - name: "example-2"
+    address: "localhost:50052"
+    tls: false
+    serve-reflection: true
+
 rules:
     # The next rule will respond with a predefined message.
   - match:
