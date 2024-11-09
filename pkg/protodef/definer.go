@@ -120,12 +120,9 @@ func (b *Definer) joinMultilineStrings(def string) (string, error) {
 }
 
 func (b *Definer) enrich(def string) string {
-	sb := &strings.Builder{}
-	_, _ = fmt.Fprintln(sb, `syntax = "proto3";`)
-	_, _ = fmt.Fprintln(sb, `import "groxypb/annotations.proto";`)
-	_, _ = fmt.Fprintln(sb)
-	_, _ = fmt.Fprintln(sb, def)
-	return sb.String()
+	const header = `syntax = "proto3"; import "groxypb/annotations.proto";
+` // intentional newline to index the line correctly
+	return header + def
 }
 
 func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
@@ -154,7 +151,7 @@ func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
 		if errors.As(err, &esp) {
 			pos := esp.GetPosition()
 			return nil, errSyntax{
-				Line: pos.Line - 3, // sub 3 lines to remove enriched parts
+				Line: pos.Line - 1, // sub 1 line to remove enriched parts
 				Col:  pos.Col, Err: esp.Unwrap().Error(),
 			}
 		}
