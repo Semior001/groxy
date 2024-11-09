@@ -16,6 +16,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v3"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
+	"crypto/tls"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -178,6 +182,46 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 	}
 
 	return rules, nil
+}
+
+// Upstreams parses the file and returns the upstreams from it.
+func (d *File) Upstreams(ctx context.Context) ([]discovery.Upstream, error) {
+	f, err := os.Open(d.FileName)
+	if err != nil {
+		return nil, fmt.Errorf("open file: %w", err)
+	}
+
+	defer f.Close()
+
+	var cfg Config
+	if err = yaml.NewDecoder(f).Decode(&cfg); err != nil {
+		return nil, fmt.Errorf("decode file: %w", err)
+	}
+
+	if cfg.Version != "1" {
+		return nil, fmt.Errorf("unsupported version: %s", cfg.Version)
+	}
+
+	res := make([]discovery.Upstream, 0, len(cfg.Upstreams))
+	for name, u := range cfg.Upstreams {
+		cred := insecure.NewCredentials()
+		if u.TLS {
+			cred = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+		}
+
+		cc, err := grpc.DialContext(ctx, u.Addr, grpc.WithTransportCredentials(cred))
+		if err != nil {
+			return nil, fmt.Errorf("dial upstream %q: %w", name, err)
+		}
+
+		res = append(res, discovery.NamedClosableClientConn{
+			ConnName:        name,
+			ServeReflection: u.ServeReflection,
+			ClientConn:      cc,
+		})
+	}
+
+	return res, nil
 }
 
 func (d *File) getModifTime(ctx context.Context) (modif time.Time, ok bool) {

@@ -135,3 +135,31 @@ func TestFile_Rules(t *testing.T) {
 		},
 	}, rules)
 }
+
+func TestFile_Upstreams(t *testing.T) {
+	tmp, err := os.CreateTemp(os.TempDir(), "groxy-test-rules")
+	require.NoError(t, err)
+	_ = tmp.Close()
+	defer os.Remove(tmp.Name())
+
+	assert.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
+
+	f := File{
+		FileName:      tmp.Name(),
+		CheckInterval: 100 * time.Millisecond,
+		Delay:         200 * time.Millisecond,
+	}
+
+	upstreams, err := f.Upstreams(context.Background())
+	require.NoError(t, err)
+
+	require.Len(t, upstreams, 2)
+	assert.Equal(t, "example-1", upstreams[0].Name())
+	assert.Equal(t, "localhost:50051", upstreams[0].Target())
+	assert.True(t, upstreams[0].Reflection())
+	// TODO: check somehow TLS
+
+	assert.Equal(t, "example-2", upstreams[1].Name())
+	assert.Equal(t, "localhost:50052", upstreams[1].Target())
+	assert.False(t, upstreams[1].Reflection())
+}

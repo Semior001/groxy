@@ -2,16 +2,15 @@ package fileprovider
 
 // Config defines a set of rules for the proxy to use.
 type Config struct {
-	Version    string     `yaml:"version"`
-	NotMatched *Respond   `yaml:"not-matched"`
-	Rules      []Rule     `yaml:"rules"`
-	Upstreams  []Upstream `yaml:"upstreams"`
+	Version    string              `yaml:"version"`
+	NotMatched *Respond            `yaml:"not-matched"`
+	Rules      []Rule              `yaml:"rules"`
+	Upstreams  map[string]Upstream `yaml:"upstreams"`
 }
 
 // Upstream specifies a service to forward requests to.
 type Upstream struct {
-	Name            string `yaml:"name"`
-	Addr            string `yaml:"addr"`
+	Addr            string `yaml:"address"`
 	TLS             bool   `yaml:"tls"`
 	ServeReflection bool   `yaml:"serve-reflection"`
 }

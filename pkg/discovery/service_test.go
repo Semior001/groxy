@@ -98,6 +98,7 @@ func TestService_Run(t *testing.T) {
 				{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
 			}, nil
 		},
+		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
 	}
 	p2 := &ProviderMock{
 		NameFunc: func() string { return "p2" },
@@ -112,6 +113,7 @@ func TestService_Run(t *testing.T) {
 				})}},
 			}, nil
 		},
+		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
 	}
 	p3 := &ProviderMock{
 		NameFunc: func() string { return "p3" },
@@ -121,6 +123,7 @@ func TestService_Run(t *testing.T) {
 		RulesFunc: func(ctx context.Context) ([]*Rule, error) {
 			return nil, errors.New("failed to get rules")
 		},
+		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
 	}
 
 	svc := &Service{Providers: []Provider{p1, p2, p3}}

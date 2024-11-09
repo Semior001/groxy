@@ -19,6 +19,9 @@ import (
 // 			MatchMetadataFunc: func(s string, mD metadata.MD) discovery.Matches {
 // 				panic("mock out the MatchMetadata method")
 // 			},
+// 			UpstreamsFunc: func() []discovery.Upstream {
+// 				panic("mock out the Upstreams method")
+// 			},
 // 		}
 //
 // 		// use mockedMatcher in code that requires proxy.Matcher
@@ -29,6 +32,9 @@ type MatcherMock struct {
 	// MatchMetadataFunc mocks the MatchMetadata method.
 	MatchMetadataFunc func(s string, mD metadata.MD) discovery.Matches
 
+	// UpstreamsFunc mocks the Upstreams method.
+	UpstreamsFunc func() []discovery.Upstream
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// MatchMetadata holds details about calls to the MatchMetadata method.
@@ -38,8 +44,12 @@ type MatcherMock struct {
 			// MD is the mD argument value.
 			MD metadata.MD
 		}
+		// Upstreams holds details about calls to the Upstreams method.
+		Upstreams []struct {
+		}
 	}
 	lockMatchMetadata sync.RWMutex
+	lockUpstreams     sync.RWMutex
 }
 
 // MatchMetadata calls MatchMetadataFunc.
@@ -74,6 +84,32 @@ func (mock *MatcherMock) MatchMetadataCalls() []struct {
 	mock.lockMatchMetadata.RLock()
 	calls = mock.calls.MatchMetadata
 	mock.lockMatchMetadata.RUnlock()
+	return calls
+}
+
+// Upstreams calls UpstreamsFunc.
+func (mock *MatcherMock) Upstreams() []discovery.Upstream {
+	if mock.UpstreamsFunc == nil {
+		panic("MatcherMock.UpstreamsFunc: method is nil but Matcher.Upstreams was just called")
+	}
+	callInfo := struct {
+	}{}
+	mock.lockUpstreams.Lock()
+	mock.calls.Upstreams = append(mock.calls.Upstreams, callInfo)
+	mock.lockUpstreams.Unlock()
+	return mock.UpstreamsFunc()
+}
+
+// UpstreamsCalls gets all the calls that were made to Upstreams.
+// Check the length with:
+//     len(mockedMatcher.UpstreamsCalls())
+func (mock *MatcherMock) UpstreamsCalls() []struct {
+} {
+	var calls []struct {
+	}
+	mock.lockUpstreams.RLock()
+	calls = mock.calls.Upstreams
+	mock.lockUpstreams.RUnlock()
 	return calls
 }
 

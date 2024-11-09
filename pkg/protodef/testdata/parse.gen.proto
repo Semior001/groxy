@@ -7,6 +7,10 @@ service TestService {
   rpc TestMethod(Request) returns (Response) {}
 }
 
+service OtherService {
+  rpc OtherMethod(Nested) returns (Response) {}
+}
+
 message Request {
   string value = 1;
 }

@@ -27,6 +27,9 @@ var _ Provider = &ProviderMock{}
 // 			RulesFunc: func(ctx context.Context) ([]*Rule, error) {
 // 				panic("mock out the Rules method")
 // 			},
+// 			UpstreamsFunc: func(ctx context.Context) ([]Upstream, error) {
+// 				panic("mock out the Upstreams method")
+// 			},
 // 		}
 //
 // 		// use mockedProvider in code that requires Provider
@@ -43,6 +46,9 @@ type ProviderMock struct {
 	// RulesFunc mocks the Rules method.
 	RulesFunc func(ctx context.Context) ([]*Rule, error)
 
+	// UpstreamsFunc mocks the Upstreams method.
+	UpstreamsFunc func(ctx context.Context) ([]Upstream, error)
+
 	// calls tracks calls to the methods.
 	calls struct {
 		// Events holds details about calls to the Events method.
@@ -58,10 +64,16 @@ type ProviderMock struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
+		// Upstreams holds details about calls to the Upstreams method.
+		Upstreams []struct {
+			// Ctx is the ctx argument value.
+			Ctx context.Context
+		}
 	}
-	lockEvents sync.RWMutex
-	lockName   sync.RWMutex
-	lockRules  sync.RWMutex
+	lockEvents    sync.RWMutex
+	lockName      sync.RWMutex
+	lockRules     sync.RWMutex
+	lockUpstreams sync.RWMutex
 }
 
 // Events calls EventsFunc.
@@ -149,5 +161,36 @@ func (mock *ProviderMock) RulesCalls() []struct {
 	mock.lockRules.RLock()
 	calls = mock.calls.Rules
 	mock.lockRules.RUnlock()
+	return calls
+}
+
+// Upstreams calls UpstreamsFunc.
+func (mock *ProviderMock) Upstreams(ctx context.Context) ([]Upstream, error) {
+	if mock.UpstreamsFunc == nil {
+		panic("ProviderMock.UpstreamsFunc: method is nil but Provider.Upstreams was just called")
+	}
+	callInfo := struct {
+		Ctx context.Context
+	}{
+		Ctx: ctx,
+	}
+	mock.lockUpstreams.Lock()
+	mock.calls.Upstreams = append(mock.calls.Upstreams, callInfo)
+	mock.lockUpstreams.Unlock()
+	return mock.UpstreamsFunc(ctx)
+}
+
+// UpstreamsCalls gets all the calls that were made to Upstreams.
+// Check the length with:
+//     len(mockedProvider.UpstreamsCalls())
+func (mock *ProviderMock) UpstreamsCalls() []struct {
+	Ctx context.Context
+} {
+	var calls []struct {
+		Ctx context.Context
+	}
+	mock.lockUpstreams.RLock()
+	calls = mock.calls.Upstreams
+	mock.lockUpstreams.RUnlock()
 	return calls
 }

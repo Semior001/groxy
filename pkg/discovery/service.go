@@ -18,8 +18,9 @@ import (
 type Service struct {
 	Providers []Provider
 
-	rules []*Rule
-	mu    sync.RWMutex
+	upstreams []Upstream
+	rules     []*Rule
+	mu        sync.RWMutex
 }
 
 // Run starts a blocking loop that updates the routing rules
@@ -43,8 +44,10 @@ func (s *Service) Run(ctx context.Context) (err error) {
 			slog.DebugContext(ctx, "new event update received", slog.String("event", ev))
 
 			rules := s.mergeRules(ctx)
+			upstreams := s.mergeUpstreams(ctx)
 			s.mu.Lock()
 			s.rules = rules
+			s.upstreams = upstreams
 			s.mu.Unlock()
 		}
 	}
@@ -78,6 +81,22 @@ func (s *Service) mergeRules(ctx context.Context) []*Rule {
 	return rules
 }
 
+func (s *Service) mergeUpstreams(ctx context.Context) []Upstream {
+	var upstreams []Upstream
+	for _, p := range s.Providers {
+		us, err := p.Upstreams(ctx)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to get upstreams",
+				slog.String("provider", p.Name()),
+				slogx.Error(err))
+			continue
+		}
+		upstreams = append(upstreams, us...)
+	}
+
+	return upstreams
+}
+
 // MatchMetadata matches the given gRPC request to an upstream connection.
 func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
 	s.mu.RLock()
@@ -91,6 +110,14 @@ func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
 	}
 
 	return matches
+}
+
+// Upstreams returns the list of upstream connections.
+func (s *Service) Upstreams() []Upstream {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.upstreams
 }
 
 // Matches is a set of matches.

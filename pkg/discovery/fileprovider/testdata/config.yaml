@@ -3,6 +3,17 @@ version: 1
 not-matched:
   status: { code: "NOT_FOUND", message: "some custom not found" }
 
+upstreams:
+  example-1:
+    address: "localhost:50051"
+    tls: false
+    serve-reflection: true
+
+  example-2:
+    address: "localhost:50052"
+    tls: true
+    serve-reflection: false
+
 rules:
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"

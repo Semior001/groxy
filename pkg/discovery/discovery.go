@@ -12,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
+	"google.golang.org/grpc"
 )
 
 // Provider provides routing rules for the Service.
@@ -25,6 +26,9 @@ type Provider interface {
 
 	// Rules returns the routing rules.
 	Rules(ctx context.Context) ([]*Rule, error)
+
+	// Upstreams returns the upstreams.
+	Upstreams(ctx context.Context) ([]Upstream, error)
 }
 
 // Mock contains the details of how the handler should reply to the downstream.
@@ -92,3 +96,26 @@ func (r RequestMatcher) Matches(uri string, md metadata.MD) bool {
 
 	return true
 }
+
+// Upstream specifies a gRPC client connection.
+type Upstream interface {
+	Name() string
+	Reflection() bool
+
+	Target() string
+	Close() error
+	grpc.ClientConnInterface
+}
+
+// NamedClosableClientConn is a named closable client connection.
+type NamedClosableClientConn struct {
+	ConnName        string
+	ServeReflection bool
+	*grpc.ClientConn
+}
+
+// Name returns the name of the connection.
+func (n NamedClosableClientConn) Name() string { return n.ConnName }
+
+// Reflection returns true if the connection serves reflection.
+func (n NamedClosableClientConn) Reflection() bool { return n.ServeReflection }

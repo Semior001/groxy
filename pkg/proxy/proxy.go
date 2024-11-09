@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"strings"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -26,6 +27,7 @@ type ServerStream grpc.ServerStream
 // registered rules.
 type Matcher interface {
 	MatchMetadata(string, metadata.MD) discovery.Matches
+	Upstreams() []discovery.Upstream
 }
 
 // Server is a gRPC server.
@@ -95,6 +97,10 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 		return s.defaultResponder(stream, nil)
 	}
 
+	if strings.HasPrefix(mtd, "/grpc.reflection.") {
+		return s.serveReflection(stream)
+	}
+
 	md, ok := metadata.FromIncomingContext(ctx)
 	if !ok {
 		md = metadata.New(nil)
@@ -160,4 +166,8 @@ func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {
 			return status.Errorf(codes.Internal, "{groxy} failed to read the rest of the stream: %v", err)
 		}
 	}
+}
+
+func (s *Server) serveReflection(stream grpc.ServerStream) error {
+	return status.Error(codes.Unimplemented, "{groxy} reflection is not supported")
 }

@@ -107,3 +107,93 @@ var TestService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "pkg/protodef/testdata/parse.gen.proto",
 }
+
+const (
+	OtherService_OtherMethod_FullMethodName = "/groxy.runtime_generated.OtherService/OtherMethod"
+)
+
+// OtherServiceClient is the client API for OtherService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type OtherServiceClient interface {
+	OtherMethod(ctx context.Context, in *Nested, opts ...grpc.CallOption) (*Response, error)
+}
+
+type otherServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewOtherServiceClient(cc grpc.ClientConnInterface) OtherServiceClient {
+	return &otherServiceClient{cc}
+}
+
+func (c *otherServiceClient) OtherMethod(ctx context.Context, in *Nested, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := c.cc.Invoke(ctx, OtherService_OtherMethod_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// OtherServiceServer is the server API for OtherService service.
+// All implementations must embed UnimplementedOtherServiceServer
+// for forward compatibility
+type OtherServiceServer interface {
+	OtherMethod(context.Context, *Nested) (*Response, error)
+	mustEmbedUnimplementedOtherServiceServer()
+}
+
+// UnimplementedOtherServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedOtherServiceServer struct {
+}
+
+func (UnimplementedOtherServiceServer) OtherMethod(context.Context, *Nested) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OtherMethod not implemented")
+}
+func (UnimplementedOtherServiceServer) mustEmbedUnimplementedOtherServiceServer() {}
+
+// UnsafeOtherServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to OtherServiceServer will
+// result in compilation errors.
+type UnsafeOtherServiceServer interface {
+	mustEmbedUnimplementedOtherServiceServer()
+}
+
+func RegisterOtherServiceServer(s grpc.ServiceRegistrar, srv OtherServiceServer) {
+	s.RegisterService(&OtherService_ServiceDesc, srv)
+}
+
+func _OtherService_OtherMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Nested)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OtherServiceServer).OtherMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OtherService_OtherMethod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OtherServiceServer).OtherMethod(ctx, req.(*Nested))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// OtherService_ServiceDesc is the grpc.ServiceDesc for OtherService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var OtherService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "groxy.runtime_generated.OtherService",
+	HandlerType: (*OtherServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OtherMethod",
+			Handler:    _OtherService_OtherMethod_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "pkg/protodef/testdata/parse.gen.proto",
+}
