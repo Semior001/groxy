@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"strings"
+	"github.com/Semior001/groxy/pkg/proxy/grpcx"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -71,7 +72,7 @@ func (s *Server) Listen(addr string) (err error) {
 			middleware.AppInfo("groxy", "Semior001", s.version),
 			middleware.Log(s.debug),
 		)),
-		grpc.ForceServerCodec(RawBytesCodec{}),
+		grpc.ForceServerCodec(grpcx.RawBytesCodec{}),
 	)...)
 
 	if s.l, err = net.Listen("tcp", addr); err != nil {

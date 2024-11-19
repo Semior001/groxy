@@ -29,3 +29,7 @@ tasks:
         --go_out=./pkg/protodef/testdata --go_opt=module=$GO_MODULE/pkg/protodef/testdata \
         --go-grpc_out=./pkg/protodef/testdata --go-grpc_opt=module=$GO_MODULE/pkg/protodef/testdata \
         ./pkg/protodef/testdata/*.gen.proto
+      protoc \
+        --go_out=./pkg/proxy/grpcx/grpctest --go_opt=module=$GO_MODULE/pkg/proxy/grpcx/grpctest \
+        --go-grpc_out=./pkg/proxy/grpcx/grpctest --go-grpc_opt=module=$GO_MODULE/pkg/proxy/grpcx/grpctest \
+        ./pkg/proxy/grpcx/grpctest/*.proto
