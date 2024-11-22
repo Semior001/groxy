@@ -17,6 +17,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"github.com/samber/lo"
+	"google.golang.org/grpc/status"
 )
 
 // Reflector serves the reflection across multiple upstreams,
@@ -36,6 +37,7 @@ type SRIClient struct {
 
 // Middleware returns a middleware that reflects the request to the upstreams.
 // Requires consumer to force grpcx.RawBytesCodec.
+//goland:noinspection GoDeprecation
 func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 	if r.Logger == nil {
 		r.Logger = slog.Default()
@@ -77,7 +79,8 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 					slog.String("upstream", upstream.Name()),
 					slog.String("target", upstream.Target()),
 					slogx.Error(err))
-				return fmt.Errorf("can't make a new stream to upstream: %w", err)
+				return status.Errorf(codes.Internal, "{groxy }can't make a new stream to upstream %s",
+					upstream.Name())
 			}
 
 			clients[idx] = SRIClient{
@@ -102,13 +105,13 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 				}
 
 				r.Logger.WarnContext(ctx, "failed to receive message", slogx.Error(err))
-				return fmt.Errorf("receive message: %w", err)
+				return status.Error(codes.Internal, "{groxy} failed to receive message")
 			}
 
 			resp, err := r.reflect(ctx, r.asV1Request(recv), clients)
 			if err != nil {
 				r.Logger.WarnContext(ctx, "failed to reflect", slogx.Error(err))
-				return fmt.Errorf("reflect: %w", err)
+				return status.Error(codes.Internal, "{groxy} failed to reflect")
 			}
 
 			result := any(resp)
@@ -118,7 +121,7 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 			if err = clientStream.SendMsg(result); err != nil {
 				r.Logger.WarnContext(ctx, "failed to send message", slogx.Error(err))
-				return fmt.Errorf("send response message to client: %w", err)
+				return status.Error(codes.Internal, "{groxy} failed to send message")
 			}
 		}
 	}
@@ -279,6 +282,7 @@ func (r Reflector) mergeServiceResponses(
 	}
 }
 
+//goland:noinspection GoDeprecation
 func (r Reflector) asV1Request(recv any) *rapi1.ServerReflectionRequest {
 	msg, ok := recv.(*rapi1alpha.ServerReflectionRequest)
 	if !ok {
@@ -318,6 +322,7 @@ func (r Reflector) asV1Request(recv any) *rapi1.ServerReflectionRequest {
 	return result
 }
 
+//goland:noinspection ALL
 func (r Reflector) asV1AlphaResponse(req any, resp *rapi1.ServerReflectionResponse) any {
 	result := &rapi1alpha.ServerReflectionResponse{OriginalRequest: req.(*rapi1alpha.ServerReflectionRequest)}
 
