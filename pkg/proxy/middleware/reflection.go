@@ -1,3 +1,5 @@
+// Package middleware contains middlewares for gRPC unknown handlers.
+//nolint:staticcheck // this file uses deprecated reflection API
 package middleware
 
 import (
