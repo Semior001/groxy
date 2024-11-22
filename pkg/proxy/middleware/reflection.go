@@ -51,6 +51,23 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 		alpha := strings.HasPrefix(method, "/grpc.reflection.v1alpha")
 
 		clients := make([]SRIClient, len(upstreams))
+		defer func() {
+			for _, client := range clients {
+				if client.ServerReflection_ServerReflectionInfoClient == nil {
+					continue
+				}
+
+				if err := client.CloseSend(); err != nil {
+					r.Logger.WarnContext(ctx, "failed to close the stream to upstream",
+						slog.String("upstream", client.Name),
+						slogx.Error(err))
+					continue
+				}
+
+				r.Logger.DebugContext(ctx, "closed the stream to upstream",
+					slog.String("upstream", client.Name))
+			}
+		}()
 		for idx, upstream := range upstreams {
 			cl, err := rapi1.NewServerReflectionClient(upstream).ServerReflectionInfo(ctx)
 			if err != nil {
@@ -60,6 +77,7 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 					slogx.Error(err))
 				return fmt.Errorf("can't make a new stream to upstream: %w", err)
 			}
+
 			clients[idx] = SRIClient{
 				Name: upstream.Name(),
 				ServerReflection_ServerReflectionInfoClient: cl,
@@ -67,21 +85,8 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 			r.Logger.DebugContext(ctx, "brought up a new stream to upstream",
 				slog.String("upstream", upstream.Name()),
-				slog.String("target", upstream.Target()),
-				slog.Int("upstream_no", idx))
+				slog.String("target", upstream.Target()))
 		}
-
-		defer func() {
-			for _, client := range clients {
-				if err := client.CloseSend(); err != nil {
-					r.Logger.WarnContext(ctx, "failed to close the stream to upstream",
-						slog.String("upstream", client.Name),
-						slogx.Error(err))
-				}
-				r.Logger.DebugContext(ctx, "closed the stream to upstream",
-					slog.String("upstream", client.Name))
-			}
-		}()
 
 		for {
 			recv := any(&rapi1.ServerReflectionRequest{})
