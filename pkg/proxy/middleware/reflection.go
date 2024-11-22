@@ -111,7 +111,12 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 				return fmt.Errorf("reflect: %w", err)
 			}
 
-			if err = clientStream.SendMsg(resp); err != nil {
+			result := any(resp)
+			if alpha {
+				result = r.asV1AlphaResponse(recv, resp)
+			}
+
+			if err = clientStream.SendMsg(result); err != nil {
 				r.Logger.WarnContext(ctx, "failed to send message", slogx.Error(err))
 				return fmt.Errorf("send response message to client: %w", err)
 			}
@@ -308,6 +313,39 @@ func (r Reflector) asV1Request(recv any) *rapi1.ServerReflectionRequest {
 		}
 	default:
 		panic(fmt.Sprintf("unexpected message request: %T", req))
+	}
+
+	return result
+}
+
+func (r Reflector) asV1AlphaResponse(req any, resp *rapi1.ServerReflectionResponse) any {
+	result := &rapi1alpha.ServerReflectionResponse{OriginalRequest: req.(*rapi1alpha.ServerReflectionRequest)}
+
+	switch resp := resp.MessageResponse.(type) {
+	case *rapi1.ServerReflectionResponse_ErrorResponse:
+		result.MessageResponse = &rapi1alpha.ServerReflectionResponse_ErrorResponse{
+			ErrorResponse: &rapi1alpha.ErrorResponse{
+				ErrorCode:    resp.ErrorResponse.ErrorCode,
+				ErrorMessage: resp.ErrorResponse.ErrorMessage,
+			},
+		}
+	case *rapi1.ServerReflectionResponse_FileDescriptorResponse:
+		result.MessageResponse = &rapi1alpha.ServerReflectionResponse_FileDescriptorResponse{
+			FileDescriptorResponse: &rapi1alpha.FileDescriptorResponse{
+				FileDescriptorProto: resp.FileDescriptorResponse.FileDescriptorProto,
+			},
+		}
+	case *rapi1.ServerReflectionResponse_ListServicesResponse:
+		result.MessageResponse = &rapi1alpha.ServerReflectionResponse_ListServicesResponse{
+			ListServicesResponse: &rapi1alpha.ListServiceResponse{
+				Service: lo.Map(resp.ListServicesResponse.Service,
+					func(svc *rapi1.ServiceResponse, _ int) *rapi1alpha.ServiceResponse {
+						return &rapi1alpha.ServiceResponse{Name: svc.Name}
+					}),
+			},
+		}
+	default:
+		panic(fmt.Sprintf("unexpected message response: %T", resp))
 	}
 
 	return result
