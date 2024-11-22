@@ -11,17 +11,25 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+	"context"
 )
 
 // Middleware is a function that intercepts the execution of a gRPC handler.
 type Middleware func(grpc.StreamHandler) grpc.StreamHandler
 
-// Chain is a chain of middlewares.
-func Chain(base grpc.StreamHandler, mws ...Middleware) grpc.StreamHandler {
+// Wrap is a chain of middlewares.
+func Wrap(base grpc.StreamHandler, mws ...Middleware) grpc.StreamHandler {
 	for i := len(mws) - 1; i >= 0; i-- {
 		base = mws[i](base)
 	}
 	return base
+}
+
+// Chain chains the middlewares.
+func Chain(mws ...Middleware) Middleware {
+	return func(next grpc.StreamHandler) grpc.StreamHandler {
+		return Wrap(next, mws...)
+	}
 }
 
 // AppInfo adds the app info to the header metadata.
@@ -39,6 +47,22 @@ func AppInfo(app, author, version string) Middleware {
 			}
 
 			return next(srv, stream)
+		}
+	}
+}
+
+// PassMetadata passes the incoming metadata into outgoing metadata.
+func PassMetadata() Middleware {
+	return func(next grpc.StreamHandler) grpc.StreamHandler {
+		return func(srv any, stream grpc.ServerStream) error {
+			ctx := stream.Context()
+			inMD, _ := metadata.FromIncomingContext(ctx)
+			outMD, _ := metadata.FromOutgoingContext(ctx)
+			outMD = metadata.Join(outMD, inMD)
+			return next(srv, &contextedStream{
+				ctx:          metadata.NewOutgoingContext(ctx, outMD),
+				ServerStream: stream,
+			})
 		}
 	}
 }
@@ -74,3 +98,18 @@ func Recoverer() Middleware {
 		}
 	}
 }
+
+// Maybe is a middleware that conditionally applies the given middleware.
+func Maybe(apply bool, mw Middleware) Middleware {
+	if !apply {
+		return func(next grpc.StreamHandler) grpc.StreamHandler { return next }
+	}
+	return mw
+}
+
+type contextedStream struct {
+	ctx context.Context
+	grpc.ServerStream
+}
+
+func (s contextedStream) Context() context.Context { return s.ctx }

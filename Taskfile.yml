@@ -6,6 +6,12 @@ env:
   GO_MODULE: github.com/Semior001/groxy
 
 tasks:
+  install:
+    desc: "builds and install local groxy version"
+    cmd: |
+      GROXY_VERSION=$(git describe --tags --long)
+      go install -ldflags "-X 'main.version=$GROXY_VERSION-local' -s -w" ./cmd/...
+
   lint:
     desc: "lint"
     cmds:

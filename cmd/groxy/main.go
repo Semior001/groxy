@@ -31,8 +31,10 @@ var opts struct {
 		CheckInterval time.Duration `long:"check-interval" env:"CHECK_INTERVAL" default:"3s"        description:"Check interval for the config file"`
 		Delay         time.Duration `long:"delay"          env:"DELAY"          default:"500ms"     description:"Delay before applying the changes" `
 	} `group:"file" namespace:"file" env-namespace:"FILE"`
-	JSON  bool `long:"json" env:"JSON" description:"Enable JSON logging"`
-	Debug bool `long:"debug" env:"DEBUG" description:"Enable debug mode"`
+	Signature  bool `long:"signature"     env:"SIGNATURE"        description:"Enable gRoxy signature headers"`
+	Reflection bool `long:"reflection"    env:"REFLECTION"       description:"Enable gRPC reflection merger"`
+	JSON       bool `long:"json"          env:"JSON"             description:"Enable JSON logging"`
+	Debug      bool `long:"debug"         env:"DEBUG"            description:"Enable debug mode"`
 }
 
 var version = "unknown"
@@ -79,6 +81,13 @@ func run(ctx context.Context) error {
 	proxyOpts := []proxy.Option{proxy.Version(getVersion())}
 	if opts.Debug {
 		proxyOpts = append(proxyOpts, proxy.Debug())
+	}
+	if opts.Reflection {
+		slog.Info("gRPC reflection merger enabled")
+		proxyOpts = append(proxyOpts, proxy.WithReflection())
+	}
+	if opts.Signature {
+		proxyOpts = append(proxyOpts, proxy.WithSignature())
 	}
 
 	srv := proxy.NewServer(dsvc, proxyOpts...)

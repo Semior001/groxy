@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"strings"
 	"github.com/Semior001/groxy/pkg/proxy/grpcx"
 )
 
@@ -39,15 +38,18 @@ type Server struct {
 	defaultResponder func(stream grpc.ServerStream, firstRecv []byte) error
 	matcher          Matcher
 
-	debug bool
-	l     net.Listener
-	grpc  *grpc.Server
+	signature  bool
+	reflection bool
+	debug      bool
+	l          net.Listener
+	grpc       *grpc.Server
 }
 
 // NewServer creates a new server.
 func NewServer(m Matcher, opts ...Option) *Server {
 	s := &Server{
-		matcher: m,
+		matcher:   m,
+		signature: false,
 		defaultResponder: func(_ grpc.ServerStream, _ []byte) error {
 			return status.Error(codes.Internal, "{groxy} didn't match request to any rule")
 		},
@@ -67,10 +69,17 @@ func (s *Server) Listen(addr string) (err error) {
 	defer slog.Warn("gRPC server stopped", slogx.Error(err))
 
 	s.grpc = grpc.NewServer(append(s.serverOpts,
-		grpc.UnknownServiceHandler(middleware.Chain(s.handle,
+		grpc.UnknownServiceHandler(middleware.Wrap(s.handle,
 			middleware.Recoverer(),
-			middleware.AppInfo("groxy", "Semior001", s.version),
-			middleware.Log(s.debug),
+			middleware.Maybe(s.signature, middleware.AppInfo("groxy", "Semior001", s.version)),
+			middleware.Log(s.debug, "/grpc.reflection."),
+			middleware.Maybe(s.reflection, middleware.Chain(
+				middleware.PassMetadata(),
+				middleware.Reflector{
+					Logger:        slog.Default().With(slog.String("subsystem", "reflection")),
+					UpstreamsFunc: s.matcher.Upstreams,
+				}.Middleware,
+			)),
 		)),
 		grpc.ForceServerCodec(grpcx.RawBytesCodec{}),
 	)...)
@@ -96,10 +105,6 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 	if !ok {
 		slog.WarnContext(ctx, "failed to get method from context")
 		return s.defaultResponder(stream, nil)
-	}
-
-	if strings.HasPrefix(mtd, "/grpc.reflection.") {
-		return s.serveReflection(stream)
 	}
 
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -167,8 +172,4 @@ func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {
 			return status.Errorf(codes.Internal, "{groxy} failed to read the rest of the stream: %v", err)
 		}
 	}
-}
-
-func (s *Server) serveReflection(stream grpc.ServerStream) error {
-	return status.Error(codes.Unimplemented, "{groxy} reflection is not supported")
 }

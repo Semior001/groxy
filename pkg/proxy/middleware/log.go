@@ -14,19 +14,26 @@ import (
 )
 
 // Log logs the gRPC requests.
-func Log(debug bool) Middleware {
+func Log(debug bool, skipPrefixes ...string) Middleware {
 	return func(next grpc.StreamHandler) grpc.StreamHandler {
 		return func(srv any, stream grpc.ServerStream) (err error) {
 			ctx := stream.Context()
+			mtd, ok := grpc.Method(ctx)
+			if !ok {
+				mtd = "unknown"
+			}
+
+			for _, prefix := range skipPrefixes {
+				if mtd == prefix {
+					return next(srv, stream)
+				}
+			}
+
 			ss := &statsStream{ServerStream: stream}
 
 			start := time.Now()
 			defer func() {
 				elapsed := time.Since(start)
-				mtd, ok := grpc.Method(ctx)
-				if !ok {
-					mtd = "unknown"
-				}
 
 				pi, ok := peer.FromContext(ctx)
 				if !ok {
