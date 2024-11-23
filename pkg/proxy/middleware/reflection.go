@@ -19,7 +19,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc/status"
 	"sort"
-	"github.com/Semior001/groxy/pkg/proxy/grpcx"
+	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 // Reflector serves the reflection across multiple upstreams,
@@ -81,7 +81,7 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 					slog.String("upstream", upstream.Name()),
 					slog.String("target", upstream.Target()),
 					slogx.Error(err))
-				return status.Errorf(codes.Internal, "{groxy }can't make a new stream to upstream %s",
+				return status.Errorf(codes.Internal, "{groxy} can't make a new stream to upstream %s",
 					upstream.Name())
 			}
 

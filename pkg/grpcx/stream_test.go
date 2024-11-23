@@ -2,7 +2,7 @@ package grpcx
 
 import (
 	"testing"
-	"github.com/Semior001/groxy/pkg/proxy/grpcx/grpctest"
+	"github.com/Semior001/groxy/pkg/grpcx/grpctest"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/assert"
 	"errors"

@@ -3,7 +3,7 @@ package middleware
 import (
 	"testing"
 	"google.golang.org/grpc"
-	"github.com/Semior001/groxy/pkg/proxy/grpcx/grpctest"
+	"github.com/Semior001/groxy/pkg/grpcx/grpctest"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/credentials/insecure"
 	"github.com/Semior001/groxy/pkg/discovery"
@@ -14,7 +14,7 @@ import (
 	"context"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/proto"
-	"github.com/Semior001/groxy/pkg/proxy/grpcx"
+	"github.com/Semior001/groxy/pkg/grpcx"
 	"github.com/stretchr/testify/assert"
 )
 
