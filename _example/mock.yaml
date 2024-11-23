@@ -6,7 +6,6 @@ not-matched:
 
 upstreams:
   example-1:
-    name: "example-1"
     address: "localhost:50051"
     tls: false
     serve-reflection: true

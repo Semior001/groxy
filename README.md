@@ -55,6 +55,8 @@ Usage:
 
 Application Options:
   -a, --addr=                Address to listen on (default: :8080) [$ADDR]
+      --signature            Enable gRoxy signature headers [$SIGNATURE]
+      --reflection           Enable gRPC reflection merger [$REFLECTION]
       --json                 Enable JSON logging [$JSON]
       --debug                Enable debug mode [$DEBUG]
 
@@ -98,7 +100,16 @@ gRoxy uses a YAML configuration file to define the rules for the gRPC mocking se
 |-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | version     | The version of the configuration file.<br/>The current version is `1`, and any other version will raise an error.                                                                                    |
 | not-matched | The not-matched section contains the default response if the request didn't match to any rule. Not-matched section may contain a request body, or a gRPC status. <br/><br/> See respond type section |
+| upstreams   | The upstreams section contains the list of the upstreams that serve gRPC reflection services.                                                                                                        |
 | rules       | The rules section contains the rules for the gRPC mocking server.                                                                                                                                    |
+
+Upstreams section is a key-value map of upstreams, where key is the name of the upstream to be referenced further in the rules section. Each upstream consists of the following fields:
+
+| Field            | Required | Description                                                                                                                                                 |
+|------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| address          | true     | The address of the upstream gRPC reflection service.                                                                                                        |
+| tls              | optional | The TLS configuration for the upstream. The TLS configuration consists of the following fields:                                                             |
+| serve-reflection | optional | The flag that indicates whether the upstream's responses should be included in the gRPC reflection responses. No-op if `--reflection` flag is not provided. |
 
 Rules are defined in the rules section. Each rule consists of the following fields:
 
@@ -123,6 +134,14 @@ The `Respond` section contains the response for the request. The respond section
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 
 You can also take a look at [examples](_example) for more information.
+
+### gRPC reflection
+gRoxy supports gRPC reflection services. If you want to merge the responses from the upstream gRPC reflection services, you need to provide the `--reflection` flag and set the `serve-reflection` flag to `true` on the upstreams that should be included in the reflection responses.
+
+The reflection responses are merged in the following way:
+1. Services are merged and unified by the package + service name.
+2. File descriptors are merged into a single array among the upstreams.
+3. `AllExtensionNumbersOfType` responds with the first non-error response from the upstreams.
 
 ### groxypb
 gRoxy uses the `groxypb` annotations to define values in protobuf message snippets. It compiles protobuf in a runtime, checking the target via the `groxypb.target` option and interpreting values via the `groxypb.value` option.

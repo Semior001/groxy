@@ -186,8 +186,7 @@ func (r Reflector) mergeResponses(
 	case *rapi1.ServerReflectionRequest_ListServices:
 		r.mergeServiceResponses(ctx, resps, result)
 	case *rapi1.ServerReflectionRequest_AllExtensionNumbersOfType:
-		// just return from the first one
-		result = resps[0]
+		r.respondAllExtensionNumbersOfType(resps, result)
 	default:
 		return nil, fmt.Errorf("unexpected message request: %T", req.MessageRequest)
 	}
@@ -287,6 +286,21 @@ func (r Reflector) mergeServiceResponses(
 	})
 
 	result.MessageResponse = resp
+}
+
+// respondAllExtensionNumbersOfType returns the first non-error response.
+func (r Reflector) respondAllExtensionNumbersOfType(
+	resps []*rapi1.ServerReflectionResponse,
+	result *rapi1.ServerReflectionResponse,
+) {
+	for _, resp := range resps {
+		if eresp := resp.GetErrorResponse(); eresp != nil {
+			continue
+		}
+
+		result.MessageResponse = resp.MessageResponse
+		return
+	}
 }
 
 //goland:noinspection GoDeprecation
