@@ -209,6 +209,15 @@ func (d *File) Upstreams(ctx context.Context) ([]discovery.Upstream, error) {
 			cred = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
 		}
 
+		if u.Addr == "" {
+			return nil, fmt.Errorf("empty address in upstream %q", name)
+		}
+
+		slog.DebugContext(ctx, "dialing upstream",
+			slog.String("upstream", name),
+			slog.String("address", u.Addr),
+			slog.Bool("tls", u.TLS))
+
 		cc, err := grpc.DialContext(ctx, u.Addr, grpc.WithTransportCredentials(cred))
 		if err != nil {
 			return nil, fmt.Errorf("dial upstream %q: %w", name, err)

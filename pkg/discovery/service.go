@@ -47,6 +47,7 @@ func (s *Service) Run(ctx context.Context) (err error) {
 			upstreams := s.mergeUpstreams(ctx)
 			s.mu.Lock()
 			s.rules = rules
+			s.closeUpstreams(ctx)
 			s.upstreams = upstreams
 			s.mu.Unlock()
 		}
@@ -118,6 +119,18 @@ func (s *Service) Upstreams() []Upstream {
 	defer s.mu.RUnlock()
 
 	return s.upstreams
+}
+
+func (s *Service) closeUpstreams(ctx context.Context) {
+	for _, u := range s.upstreams {
+		slog.DebugContext(ctx, "closing upstream connection", slog.String("upstream", u.Name()))
+
+		if err := u.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close upstream connection",
+				slog.String("upstream", u.Name()),
+				slogx.Error(err))
+		}
+	}
 }
 
 // Matches is a set of matches.

@@ -14,7 +14,70 @@ import (
 	"context"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/protobuf/proto"
+	"github.com/Semior001/groxy/pkg/proxy/grpcx"
+	"github.com/stretchr/testify/assert"
 )
+
+func TestReflector_MiddlewareUpstreamError(t *testing.T) {
+	backend := grpc.NewServer(grpc.StreamInterceptor(func(
+		srv any,
+		ss grpc.ServerStream,
+		info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler,
+	) error {
+		return status.Error(codes.PermissionDenied, "access denied")
+	}))
+	reflection.Register(backend)
+	backendAddr := grpctest.StartServer(t, backend)
+	t.Cleanup(backend.GracefulStop)
+
+	upstreamConn, err := grpc.Dial(backendAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, upstreamConn.Close()) })
+
+	errHandler := func(srv any, stream grpc.ServerStream) error {
+		return status.Error(codes.Internal, "should not be called")
+	}
+
+	mw := Reflector{
+		UpstreamsFunc: func() []discovery.Upstream {
+			return []discovery.Upstream{
+				discovery.NamedClosableClientConn{
+					ConnName:        "backend",
+					ServeReflection: true,
+					ClientConn:      upstreamConn,
+				},
+			}
+		},
+	}.Middleware(errHandler)
+
+	srv := grpc.NewServer(grpc.UnknownServiceHandler(func(srv any, stream grpc.ServerStream) error {
+		return mw(srv, stream)
+	}))
+	srvAddr := grpctest.StartServer(t, srv)
+	t.Cleanup(srv.GracefulStop)
+
+	conn, err := grpc.Dial(srvAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, conn.Close()) })
+
+	cl1 := rapi1.NewServerReflectionClient(conn)
+
+	stream, err := cl1.ServerReflectionInfo(context.Background())
+	require.NoError(t, err)
+
+	err = stream.Send(&rapi1.ServerReflectionRequest{
+		MessageRequest: &rapi1.ServerReflectionRequest_ListServices{},
+	})
+	require.NoError(t, err)
+
+	recv, err := stream.Recv()
+	require.Nil(t, recv)
+	st := grpcx.StatusFromError(err)
+	require.NotNil(t, st)
+	assert.Equal(t, codes.PermissionDenied, st.Code())
+	assert.Equal(t, "{groxy} received from one of upstreams: access denied", st.Message())
+}
 
 func TestReflector_Middleware(t *testing.T) {
 	s1 := grpc.NewServer()

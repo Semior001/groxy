@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/status"
+	"errors"
 )
 
 // Direction describes the direction of the message.
@@ -79,15 +80,12 @@ func Pipe(server grpc.ClientStream, client grpc.ServerStream, msgs ...Message) e
 
 // StatusFromError extracts the gRPC status from the error.
 func StatusFromError(err error) *status.Status {
-	for {
-		if se, ok := err.(interface{ GRPCStatus() *status.Status }); ok {
-			return se.GRPCStatus()
-		}
-		if u, ok := err.(interface{ Unwrap() error }); ok {
-			err = u.Unwrap()
-			continue
-		}
-		break
+	var e interface {
+		GRPCStatus() *status.Status
+		error
 	}
-	return nil
+	if !errors.As(err, &e) {
+		return nil
+	}
+	return e.GRPCStatus()
 }

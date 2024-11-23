@@ -19,6 +19,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc/status"
 	"sort"
+	"github.com/Semior001/groxy/pkg/proxy/grpcx"
 )
 
 // Reflector serves the reflection across multiple upstreams,
@@ -111,6 +112,9 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 			resp, err := r.reflect(ctx, r.asV1Request(recv), clients)
 			if err != nil {
+				if st := grpcx.StatusFromError(err); st != nil && clientCode(st.Code()) {
+					return status.Errorf(st.Code(), "{groxy} received from one of upstreams: %s", st.Message())
+				}
 				r.Logger.WarnContext(ctx, "failed to reflect", slogx.Error(err))
 				return status.Error(codes.Internal, "{groxy} failed to reflect")
 			}
@@ -139,9 +143,14 @@ func (r Reflector) reflect(
 		idx, up := idx, up
 		ewg.Go(func() error {
 			if err := up.Send(req); err != nil {
+				if errors.Is(err, io.EOF) {
+					_, rerr := up.Recv()
+					err = errors.Join(err, fmt.Errorf("recv after EOF: %w", rerr))
+				}
 				r.Logger.WarnContext(ctx, "failed to send reflection request",
 					slog.String("upstream", up.Name),
-					slogx.Error(err))
+					slogx.Error(err),
+					slog.Any("trailers", up.Trailer()))
 				return fmt.Errorf("send request to upstream: %w", err)
 			}
 
@@ -375,4 +384,21 @@ func (r Reflector) asV1AlphaResponse(req any, resp *rapi1.ServerReflectionRespon
 	}
 
 	return result
+}
+
+func clientCode(code codes.Code) bool {
+	switch code {
+	case codes.Canceled,
+		codes.Unknown,
+		codes.DeadlineExceeded,
+		codes.PermissionDenied,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.Unimplemented,
+		codes.Unavailable,
+		codes.Unauthenticated:
+		return true
+	default:
+		return false
+	}
 }
