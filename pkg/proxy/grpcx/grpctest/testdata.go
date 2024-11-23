@@ -55,24 +55,19 @@ func (s *Server) Unary(ctx context.Context, req *StreamRequest) (*StreamResponse
 }
 
 // StartServer starts a new TestServiceServer.
-func StartServer(t *testing.T, srv ExampleServiceServer, opts ...grpc.ServerOption) (addr string, closeFn func()) {
+func StartServer(t *testing.T, srv *grpc.Server) (addr string) {
 	t.Helper()
-	s := grpc.NewServer(opts...)
-
-	if srv != nil {
-		RegisterExampleServiceServer(s, srv)
-	}
 
 	l, err := net.Listen("tcp", "localhost:0")
 	require.NoError(t, err, "failed to start listener")
 
 	go func() {
-		if err := s.Serve(l); err != nil && !errors.Is(err, net.ErrClosed) {
+		if err := srv.Serve(l); err != nil && !errors.Is(err, net.ErrClosed) {
 			t.Errorf("failed to serve: %v", err)
 		}
 	}()
 
 	addr = l.Addr().String()
 	t.Logf("started test server on %s", addr)
-	return addr, s.GracefulStop
+	return addr
 }

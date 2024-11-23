@@ -312,3 +312,298 @@ var ExampleService_ServiceDesc = grpc.ServiceDesc{
 	},
 	Metadata: "pkg/proxy/grpcx/grpctest/stream.proto",
 }
+
+const (
+	OtherExampleService_OtherBiDirectional_FullMethodName = "/groxy.testdata.OtherExampleService/OtherBiDirectional"
+	OtherExampleService_OtherServerStream_FullMethodName  = "/groxy.testdata.OtherExampleService/OtherServerStream"
+	OtherExampleService_OtherClientStream_FullMethodName  = "/groxy.testdata.OtherExampleService/OtherClientStream"
+	OtherExampleService_OtherUnary_FullMethodName         = "/groxy.testdata.OtherExampleService/OtherUnary"
+)
+
+// OtherExampleServiceClient is the client API for OtherExampleService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type OtherExampleServiceClient interface {
+	OtherBiDirectional(ctx context.Context, opts ...grpc.CallOption) (OtherExampleService_OtherBiDirectionalClient, error)
+	OtherServerStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (OtherExampleService_OtherServerStreamClient, error)
+	OtherClientStream(ctx context.Context, opts ...grpc.CallOption) (OtherExampleService_OtherClientStreamClient, error)
+	OtherUnary(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (*StreamResponse, error)
+}
+
+type otherExampleServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewOtherExampleServiceClient(cc grpc.ClientConnInterface) OtherExampleServiceClient {
+	return &otherExampleServiceClient{cc}
+}
+
+func (c *otherExampleServiceClient) OtherBiDirectional(ctx context.Context, opts ...grpc.CallOption) (OtherExampleService_OtherBiDirectionalClient, error) {
+	stream, err := c.cc.NewStream(ctx, &OtherExampleService_ServiceDesc.Streams[0], OtherExampleService_OtherBiDirectional_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &otherExampleServiceOtherBiDirectionalClient{stream}
+	return x, nil
+}
+
+type OtherExampleService_OtherBiDirectionalClient interface {
+	Send(*StreamRequest) error
+	Recv() (*StreamResponse, error)
+	grpc.ClientStream
+}
+
+type otherExampleServiceOtherBiDirectionalClient struct {
+	grpc.ClientStream
+}
+
+func (x *otherExampleServiceOtherBiDirectionalClient) Send(m *StreamRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *otherExampleServiceOtherBiDirectionalClient) Recv() (*StreamResponse, error) {
+	m := new(StreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *otherExampleServiceClient) OtherServerStream(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (OtherExampleService_OtherServerStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &OtherExampleService_ServiceDesc.Streams[1], OtherExampleService_OtherServerStream_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &otherExampleServiceOtherServerStreamClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type OtherExampleService_OtherServerStreamClient interface {
+	Recv() (*StreamResponse, error)
+	grpc.ClientStream
+}
+
+type otherExampleServiceOtherServerStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *otherExampleServiceOtherServerStreamClient) Recv() (*StreamResponse, error) {
+	m := new(StreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *otherExampleServiceClient) OtherClientStream(ctx context.Context, opts ...grpc.CallOption) (OtherExampleService_OtherClientStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &OtherExampleService_ServiceDesc.Streams[2], OtherExampleService_OtherClientStream_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &otherExampleServiceOtherClientStreamClient{stream}
+	return x, nil
+}
+
+type OtherExampleService_OtherClientStreamClient interface {
+	Send(*StreamRequest) error
+	CloseAndRecv() (*StreamResponse, error)
+	grpc.ClientStream
+}
+
+type otherExampleServiceOtherClientStreamClient struct {
+	grpc.ClientStream
+}
+
+func (x *otherExampleServiceOtherClientStreamClient) Send(m *StreamRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *otherExampleServiceOtherClientStreamClient) CloseAndRecv() (*StreamResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(StreamResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *otherExampleServiceClient) OtherUnary(ctx context.Context, in *StreamRequest, opts ...grpc.CallOption) (*StreamResponse, error) {
+	out := new(StreamResponse)
+	err := c.cc.Invoke(ctx, OtherExampleService_OtherUnary_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// OtherExampleServiceServer is the server API for OtherExampleService service.
+// All implementations must embed UnimplementedOtherExampleServiceServer
+// for forward compatibility
+type OtherExampleServiceServer interface {
+	OtherBiDirectional(OtherExampleService_OtherBiDirectionalServer) error
+	OtherServerStream(*StreamRequest, OtherExampleService_OtherServerStreamServer) error
+	OtherClientStream(OtherExampleService_OtherClientStreamServer) error
+	OtherUnary(context.Context, *StreamRequest) (*StreamResponse, error)
+	mustEmbedUnimplementedOtherExampleServiceServer()
+}
+
+// UnimplementedOtherExampleServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedOtherExampleServiceServer struct {
+}
+
+func (UnimplementedOtherExampleServiceServer) OtherBiDirectional(OtherExampleService_OtherBiDirectionalServer) error {
+	return status.Errorf(codes.Unimplemented, "method OtherBiDirectional not implemented")
+}
+func (UnimplementedOtherExampleServiceServer) OtherServerStream(*StreamRequest, OtherExampleService_OtherServerStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method OtherServerStream not implemented")
+}
+func (UnimplementedOtherExampleServiceServer) OtherClientStream(OtherExampleService_OtherClientStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method OtherClientStream not implemented")
+}
+func (UnimplementedOtherExampleServiceServer) OtherUnary(context.Context, *StreamRequest) (*StreamResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method OtherUnary not implemented")
+}
+func (UnimplementedOtherExampleServiceServer) mustEmbedUnimplementedOtherExampleServiceServer() {}
+
+// UnsafeOtherExampleServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to OtherExampleServiceServer will
+// result in compilation errors.
+type UnsafeOtherExampleServiceServer interface {
+	mustEmbedUnimplementedOtherExampleServiceServer()
+}
+
+func RegisterOtherExampleServiceServer(s grpc.ServiceRegistrar, srv OtherExampleServiceServer) {
+	s.RegisterService(&OtherExampleService_ServiceDesc, srv)
+}
+
+func _OtherExampleService_OtherBiDirectional_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(OtherExampleServiceServer).OtherBiDirectional(&otherExampleServiceOtherBiDirectionalServer{stream})
+}
+
+type OtherExampleService_OtherBiDirectionalServer interface {
+	Send(*StreamResponse) error
+	Recv() (*StreamRequest, error)
+	grpc.ServerStream
+}
+
+type otherExampleServiceOtherBiDirectionalServer struct {
+	grpc.ServerStream
+}
+
+func (x *otherExampleServiceOtherBiDirectionalServer) Send(m *StreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *otherExampleServiceOtherBiDirectionalServer) Recv() (*StreamRequest, error) {
+	m := new(StreamRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _OtherExampleService_OtherServerStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(StreamRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(OtherExampleServiceServer).OtherServerStream(m, &otherExampleServiceOtherServerStreamServer{stream})
+}
+
+type OtherExampleService_OtherServerStreamServer interface {
+	Send(*StreamResponse) error
+	grpc.ServerStream
+}
+
+type otherExampleServiceOtherServerStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *otherExampleServiceOtherServerStreamServer) Send(m *StreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _OtherExampleService_OtherClientStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(OtherExampleServiceServer).OtherClientStream(&otherExampleServiceOtherClientStreamServer{stream})
+}
+
+type OtherExampleService_OtherClientStreamServer interface {
+	SendAndClose(*StreamResponse) error
+	Recv() (*StreamRequest, error)
+	grpc.ServerStream
+}
+
+type otherExampleServiceOtherClientStreamServer struct {
+	grpc.ServerStream
+}
+
+func (x *otherExampleServiceOtherClientStreamServer) SendAndClose(m *StreamResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *otherExampleServiceOtherClientStreamServer) Recv() (*StreamRequest, error) {
+	m := new(StreamRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _OtherExampleService_OtherUnary_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StreamRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(OtherExampleServiceServer).OtherUnary(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: OtherExampleService_OtherUnary_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(OtherExampleServiceServer).OtherUnary(ctx, req.(*StreamRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// OtherExampleService_ServiceDesc is the grpc.ServiceDesc for OtherExampleService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var OtherExampleService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "groxy.testdata.OtherExampleService",
+	HandlerType: (*OtherExampleServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "OtherUnary",
+			Handler:    _OtherExampleService_OtherUnary_Handler,
+		},
+	},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "OtherBiDirectional",
+			Handler:       _OtherExampleService_OtherBiDirectional_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "OtherServerStream",
+			Handler:       _OtherExampleService_OtherServerStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "OtherClientStream",
+			Handler:       _OtherExampleService_OtherClientStream_Handler,
+			ClientStreams: true,
+		},
+	},
+	Metadata: "pkg/proxy/grpcx/grpctest/stream.proto",
+}

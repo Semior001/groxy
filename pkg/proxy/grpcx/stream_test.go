@@ -37,13 +37,17 @@ func TestPipe(t *testing.T) {
 			},
 		}
 
-		backend, closeFn := grpctest.StartServer(t, srv)
-		t.Cleanup(closeFn)
+		s := grpc.NewServer()
+		grpctest.RegisterExampleServiceServer(s, srv)
+
+		backend := grpctest.StartServer(t, s)
+		t.Cleanup(s.GracefulStop)
 
 		backendConn, err := grpc.Dial(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
-		frontend, closeFn := grpctest.StartServer(t, nil, grpc.ForceServerCodec(RawBytesCodec{}),
+		frontendS := grpc.NewServer(
+			grpc.ForceServerCodec(RawBytesCodec{}),
 			grpc.UnknownServiceHandler(func(_ any, stream grpc.ServerStream) error {
 				ctx := stream.Context()
 
@@ -73,8 +77,11 @@ func TestPipe(t *testing.T) {
 					return nil
 				}
 				return err
-			}))
-		t.Cleanup(closeFn)
+			}),
+		)
+
+		frontend := grpctest.StartServer(t, frontendS)
+		t.Cleanup(frontendS.GracefulStop)
 
 		frontendConn, err := grpc.Dial(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
@@ -110,13 +117,17 @@ func TestPipe(t *testing.T) {
 			},
 		}
 
-		backend, closeFn := grpctest.StartServer(t, srv)
-		t.Cleanup(closeFn)
+		s := grpc.NewServer()
+		grpctest.RegisterExampleServiceServer(s, srv)
+
+		backend := grpctest.StartServer(t, s)
+		t.Cleanup(s.GracefulStop)
 
 		backendConn, err := grpc.Dial(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
-		frontend, closeFn := grpctest.StartServer(t, nil, grpc.ForceServerCodec(RawBytesCodec{}),
+		frontendS := grpc.NewServer(
+			grpc.ForceServerCodec(RawBytesCodec{}),
 			grpc.UnknownServiceHandler(func(_ any, stream grpc.ServerStream) error {
 				ctx := stream.Context()
 
@@ -139,11 +150,15 @@ func TestPipe(t *testing.T) {
 				defer cs.CloseSend()
 
 				if err = Pipe(cs, stream); errors.Is(err, io.EOF) {
+
 					return nil
 				}
 				return err
-			}))
-		t.Cleanup(closeFn)
+			}),
+		)
+
+		frontend := grpctest.StartServer(t, frontendS)
+		t.Cleanup(frontendS.GracefulStop)
 
 		frontendConn, err := grpc.Dial(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)

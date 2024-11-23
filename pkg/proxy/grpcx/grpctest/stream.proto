@@ -17,3 +17,10 @@ message StreamRequest {
 message StreamResponse {
   string value = 1;
 }
+
+service OtherExampleService {
+  rpc OtherBiDirectional(stream StreamRequest) returns (stream StreamResponse) {}
+  rpc OtherServerStream(StreamRequest) returns (stream StreamResponse) {}
+  rpc OtherClientStream(stream StreamRequest) returns (StreamResponse) {}
+  rpc OtherUnary(StreamRequest) returns (StreamResponse) {}
+}

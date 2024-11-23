@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"github.com/samber/lo"
 	"google.golang.org/grpc/status"
+	"sort"
 )
 
 // Reflector serves the reflection across multiple upstreams,
@@ -273,13 +274,19 @@ func (r Reflector) mergeServiceResponses(
 		return
 	}
 
-	result.MessageResponse = &rapi1.ServerReflectionResponse_ListServicesResponse{
+	resp := &rapi1.ServerReflectionResponse_ListServicesResponse{
 		ListServicesResponse: &rapi1.ListServiceResponse{
 			Service: lo.Map(lo.Keys(services), func(service string, _ int) *rapi1.ServiceResponse {
 				return &rapi1.ServiceResponse{Name: service}
 			}),
 		},
 	}
+
+	sort.Slice(resp.ListServicesResponse.Service, func(i, j int) bool {
+		return resp.ListServicesResponse.Service[i].Name < resp.ListServicesResponse.Service[j].Name
+	})
+
+	result.MessageResponse = resp
 }
 
 //goland:noinspection GoDeprecation
