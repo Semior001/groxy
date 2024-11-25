@@ -21,6 +21,7 @@ import (
 	"google.golang.org/grpc/credentials"
 	"crypto/tls"
 	"sort"
+	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -170,7 +171,10 @@ func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream,
 			slog.String("address", u.Addr),
 			slog.Bool("tls", u.TLS))
 
-		cc, err := grpc.DialContext(ctx, u.Addr, grpc.WithTransportCredentials(cred))
+		cc, err := grpc.DialContext(ctx, u.Addr,
+			grpc.WithTransportCredentials(cred),
+			grpc.WithStreamInterceptor(grpcx.ClientLogInterceptor(slog.Default())),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("dial upstream %q: %w", name, err)
 		}

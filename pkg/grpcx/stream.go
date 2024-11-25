@@ -8,6 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/status"
 	"errors"
+	"google.golang.org/grpc/codes"
 )
 
 // Direction describes the direction of the message.
@@ -88,4 +89,22 @@ func StatusFromError(err error) *status.Status {
 		return nil
 	}
 	return e.GRPCStatus()
+}
+
+// ClientCode returns true if the code is a client-side error.
+func ClientCode(code codes.Code) bool {
+	switch code {
+	case codes.Canceled,
+		codes.Unknown,
+		codes.DeadlineExceeded,
+		codes.PermissionDenied,
+		codes.ResourceExhausted,
+		codes.Aborted,
+		codes.Unimplemented,
+		codes.Unavailable,
+		codes.Unauthenticated:
+		return true
+	default:
+		return false
+	}
 }
