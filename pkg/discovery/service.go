@@ -44,8 +44,7 @@ func (s *Service) Run(ctx context.Context) (err error) {
 		case ev := <-ch:
 			slog.DebugContext(ctx, "new event update received", slog.String("event", ev))
 
-			rules := s.mergeRules(ctx)
-			upstreams := s.mergeUpstreams(ctx)
+			rules, upstreams := s.mergeStates(ctx)
 			s.mu.Lock()
 			s.rules = rules
 			s.closeUpstreams(ctx)
@@ -55,17 +54,19 @@ func (s *Service) Run(ctx context.Context) (err error) {
 	}
 }
 
-func (s *Service) mergeRules(ctx context.Context) []*Rule {
+func (s *Service) mergeStates(ctx context.Context) ([]*Rule, []Upstream) {
 	var rules []*Rule
+	var upstreams []Upstream
 	for _, p := range s.Providers {
-		rs, err := p.Rules(ctx)
+		st, err := p.State(ctx)
 		if err != nil {
-			slog.ErrorContext(ctx, "failed to get rules",
+			slog.ErrorContext(ctx, "failed to get state of the provider",
 				slog.String("provider", p.Name()),
 				slogx.Error(err))
 			continue
 		}
-		rules = append(rules, rs...)
+		rules = append(rules, st.Rules...)
+		upstreams = append(upstreams, st.Upstreams...)
 	}
 
 	// sort rules by the following order:
@@ -80,23 +81,7 @@ func (s *Service) mergeRules(ctx context.Context) []*Rule {
 		return ri.Message != nil && rj.Message == nil
 	})
 
-	return rules
-}
-
-func (s *Service) mergeUpstreams(ctx context.Context) []Upstream {
-	var upstreams []Upstream
-	for _, p := range s.Providers {
-		us, err := p.Upstreams(ctx)
-		if err != nil {
-			slog.ErrorContext(ctx, "failed to get upstreams",
-				slog.String("provider", p.Name()),
-				slogx.Error(err))
-			continue
-		}
-		upstreams = append(upstreams, us...)
-	}
-
-	return upstreams
+	return rules, upstreams
 }
 
 // MatchMetadata matches the given gRPC request to an upstream connection.

@@ -73,21 +73,23 @@ func TestFile_Rules(t *testing.T) {
 		Delay:         200 * time.Millisecond,
 	}
 
-	rules, err := f.Rules(context.Background())
+	state, err := f.State(context.Background())
 	require.NoError(t, err)
 
-	require.Len(t, rules, 5)
-	assert.NotNil(t, rules[0].Match.Message)
-	assert.NotNil(t, rules[0].Mock.Body)
-	assert.NotNil(t, rules[1].Match.Message)
-	assert.NotNil(t, rules[1].Mock.Body)
-	assert.NotNil(t, rules[2].Mock.Body)
+	require.Len(t, state.Rules, 6)
+	assert.NotNil(t, state.Rules[0].Match.Message)
+	assert.NotNil(t, state.Rules[0].Mock.Body)
+	assert.NotNil(t, state.Rules[1].Match.Message)
+	assert.NotNil(t, state.Rules[1].Mock.Body)
+	assert.NotNil(t, state.Rules[2].Mock.Body)
+	assert.NotNil(t, state.Rules[4].Forward)
 
-	rules[0].Match.Message = nil
-	rules[0].Mock.Body = nil
-	rules[1].Match.Message = nil
-	rules[1].Mock.Body = nil
-	rules[2].Mock.Body = nil
+	state.Rules[0].Match.Message = nil
+	state.Rules[0].Mock.Body = nil
+	state.Rules[1].Match.Message = nil
+	state.Rules[1].Mock.Body = nil
+	state.Rules[2].Mock.Body = nil
+	state.Rules[4].Forward = nil
 
 	assert.Equal(t, []*discovery.Rule{
 		{
@@ -127,13 +129,20 @@ func TestFile_Rules(t *testing.T) {
 			},
 		},
 		{
+			Name: "com.github.Semior001.groxy.example.mock.Upstream/Get",
+			Match: discovery.RequestMatcher{
+				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.Upstream/Get"),
+				IncomingMetadata: metadata.New(nil),
+			},
+		},
+		{
 			Name:  "not matched",
 			Match: discovery.RequestMatcher{URI: regexp.MustCompile(".*")},
 			Mock: &discovery.Mock{
 				Status: status.New(codes.NotFound, "some custom not found"),
 			},
 		},
-	}, rules)
+	}, state.Rules)
 }
 
 func TestFile_Upstreams(t *testing.T) {
@@ -150,16 +159,16 @@ func TestFile_Upstreams(t *testing.T) {
 		Delay:         200 * time.Millisecond,
 	}
 
-	upstreams, err := f.Upstreams(context.Background())
+	state, err := f.State(context.Background())
 	require.NoError(t, err)
 
-	require.Len(t, upstreams, 2)
-	assert.Equal(t, "example-1", upstreams[0].Name())
-	assert.Equal(t, "localhost:50051", upstreams[0].Target())
-	assert.True(t, upstreams[0].Reflection())
+	require.Len(t, state.Upstreams, 2)
+	assert.Equal(t, "example-1", state.Upstreams[0].Name())
+	assert.Equal(t, "localhost:50051", state.Upstreams[0].Target())
+	assert.True(t, state.Upstreams[0].Reflection())
 	// TODO: check somehow TLS
 
-	assert.Equal(t, "example-2", upstreams[1].Name())
-	assert.Equal(t, "localhost:50052", upstreams[1].Target())
-	assert.False(t, upstreams[1].Reflection())
+	assert.Equal(t, "example-2", state.Upstreams[1].Name())
+	assert.Equal(t, "localhost:50052", state.Upstreams[1].Target())
+	assert.False(t, state.Upstreams[1].Reflection())
 }

@@ -80,3 +80,8 @@ rules:
       metadata:
         header: { X-Request-Id: "123"   }
         trailer: { Powered-By:   "groxy" }
+
+    # The next rule will forward the request to the specified upstream.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.Upstream/Get" }
+    forward: { upstream: example-1 }
+

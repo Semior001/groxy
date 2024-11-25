@@ -90,8 +90,8 @@ func (d *File) Events(ctx context.Context) <-chan string {
 	return res
 }
 
-// Rules parses the file and returns the routing rules from it.
-func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
+// State parses the file and returns the current state of the provider.
+func (d *File) State(ctx context.Context) (*discovery.State, error) {
 	f, err := os.Open(d.FileName)
 	if err != nil {
 		return nil, fmt.Errorf("open file: %w", err)
@@ -100,7 +100,7 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 	defer f.Close()
 
 	var cfg Config
-	if err = yaml.NewDecoder(f).Decode(&cfg); err != nil {
+	if err := yaml.NewDecoder(f).Decode(&cfg); err != nil {
 		return nil, fmt.Errorf("decode file: %w", err)
 	}
 
@@ -108,62 +108,28 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 		return nil, fmt.Errorf("unsupported version: %s", cfg.Version)
 	}
 
-	parseRespond := func(r Respond) (result *discovery.Mock, err error) {
-		result = &discovery.Mock{}
-
-		if r.Metadata != nil {
-			result.Header = metadata.New(r.Metadata.Header)
-			result.Trailer = metadata.New(r.Metadata.Trailer)
-		}
-
-		switch {
-		case r.Status != nil && r.Body != nil:
-			return nil, fmt.Errorf("can't set both status and body in rule")
-		case r.Status != nil:
-			var code codes.Code
-			if err = code.UnmarshalJSON([]byte(fmt.Sprintf("%q", r.Status.Code))); err != nil {
-				return nil, fmt.Errorf("unmarshal status code: %w", err)
-			}
-			result.Status = status.New(code, r.Status.Message)
-		case r.Body != nil:
-			if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
-				return nil, fmt.Errorf("build respond message: %w", err)
-			}
-		default:
-			return nil, fmt.Errorf("empty response in rule")
-		}
-
-		return result, nil
+	upstreams, err := d.upstreams(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("get upstreams: %w", err)
 	}
 
-	parseRule := func(r Rule) (result discovery.Rule, err error) {
-		if r.Match.URI == "" {
-			return discovery.Rule{}, fmt.Errorf("empty URI in rule")
-		}
-
-		result.Name = r.Match.URI
-		if result.Match.URI, err = regexp.Compile(r.Match.URI); err != nil {
-			return discovery.Rule{}, fmt.Errorf("compile URI regexp: %w", err)
-		}
-
-		result.Match.IncomingMetadata = metadata.New(r.Match.Header)
-
-		if r.Match.Body != nil {
-			if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {
-				return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
-			}
-		}
-
-		if result.Mock, err = parseRespond(r.Respond); err != nil {
-			return discovery.Rule{}, fmt.Errorf("parse respond: %w", err)
-		}
-
-		return result, nil
+	rules, err := d.rules(cfg, upstreams)
+	if err != nil {
+		return nil, fmt.Errorf("get rules: %w", err)
 	}
 
+	return &discovery.State{
+		Name:      d.Name(),
+		Rules:     rules,
+		Upstreams: upstreams,
+	}, nil
+}
+
+// Rules parses the file and returns the routing rules from it.
+func (d *File) rules(cfg Config, upstreams []discovery.Upstream) ([]*discovery.Rule, error) {
 	rules := make([]*discovery.Rule, 0, len(cfg.Rules)+1)
 	for idx, r := range cfg.Rules {
-		rule, err := parseRule(r)
+		rule, err := parseRule(r, upstreams)
 		if err != nil {
 			return nil, fmt.Errorf("parse rule #%d: %w", idx, err)
 		}
@@ -172,12 +138,14 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 	}
 
 	if cfg.NotMatched != nil {
+		mock, err := parseRespond(cfg.NotMatched)
+		if err != nil {
+			return nil, fmt.Errorf("parse respond: %w", err)
+		}
 		rule := discovery.Rule{
 			Name:  "not matched",
 			Match: discovery.RequestMatcher{URI: regexp.MustCompile(".*")},
-		}
-		if rule.Mock, err = parseRespond(*cfg.NotMatched); err != nil {
-			return nil, fmt.Errorf("parse respond: %w", err)
+			Mock:  mock,
 		}
 		rules = append(rules, &rule)
 	}
@@ -185,24 +153,7 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 	return rules, nil
 }
 
-// Upstreams parses the file and returns the upstreams from it.
-func (d *File) Upstreams(ctx context.Context) ([]discovery.Upstream, error) {
-	f, err := os.Open(d.FileName)
-	if err != nil {
-		return nil, fmt.Errorf("open file: %w", err)
-	}
-
-	defer f.Close()
-
-	var cfg Config
-	if err = yaml.NewDecoder(f).Decode(&cfg); err != nil {
-		return nil, fmt.Errorf("decode file: %w", err)
-	}
-
-	if cfg.Version != "1" {
-		return nil, fmt.Errorf("unsupported version: %s", cfg.Version)
-	}
-
+func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream, error) {
 	res := make([]discovery.Upstream, 0, len(cfg.Upstreams))
 	for name, u := range cfg.Upstreams {
 		cred := insecure.NewCredentials()
@@ -252,4 +203,74 @@ func (d *File) getModifTime(ctx context.Context) (modif time.Time, ok bool) {
 	}
 
 	return fi.ModTime(), true
+}
+
+func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, err error) {
+	if r.Match.URI == "" {
+		return discovery.Rule{}, fmt.Errorf("empty URI in rule")
+	}
+
+	result.Name = r.Match.URI
+	if result.Match.URI, err = regexp.Compile(r.Match.URI); err != nil {
+		return discovery.Rule{}, fmt.Errorf("compile URI regexp: %w", err)
+	}
+
+	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
+
+	if r.Match.Body != nil {
+		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {
+			return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
+		}
+	}
+
+	if r.Forward != nil {
+		for _, up := range upstreams {
+			if up.Name() == r.Forward.Upstream {
+				result.Forward = up
+				break
+			}
+		}
+	}
+
+	if result.Mock, err = parseRespond(r.Respond); err != nil {
+		return discovery.Rule{}, fmt.Errorf("parse respond: %w", err)
+	}
+
+	if result.Mock != nil && result.Forward != nil {
+		return discovery.Rule{}, fmt.Errorf("can't set both mock and forward in rule")
+	}
+
+	return result, nil
+}
+
+func parseRespond(r *Respond) (result *discovery.Mock, err error) {
+	if r == nil {
+		return nil, nil
+	}
+
+	result = &discovery.Mock{}
+
+	if r.Metadata != nil {
+		result.Header = metadata.New(r.Metadata.Header)
+		result.Trailer = metadata.New(r.Metadata.Trailer)
+	}
+
+	switch {
+	case r.Status != nil && r.Body != nil:
+		return nil, fmt.Errorf("can't set both status and body in rule")
+	case r.Status != nil:
+		var code codes.Code
+		if err = code.UnmarshalJSON([]byte(fmt.Sprintf("%q", r.Status.Code))); err != nil {
+			return nil, fmt.Errorf("unmarshal status code: %w", err)
+		}
+		result.Status = status.New(code, r.Status.Message)
+	case r.Body != nil:
+		if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
+			return nil, fmt.Errorf("build respond message: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("empty response in rule")
+	}
+
+	return result, nil
 }

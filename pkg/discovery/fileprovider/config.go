@@ -22,7 +22,13 @@ type Rule struct {
 		Header map[string]string `yaml:"header"`
 		Body   *string           `yaml:"body"`
 	} `yaml:"match"`
-	Respond Respond `yaml:"respond"`
+	Respond *Respond `yaml:"respond,omitempty"`
+	Forward *Forward `yaml:"forward,omitempty"`
+}
+
+// Forward specifies how the service should forward the request.
+type Forward struct {
+	Upstream string `yaml:"upstream"`
 }
 
 // Respond specifies how the service should respond to the request.

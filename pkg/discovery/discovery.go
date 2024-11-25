@@ -24,11 +24,20 @@ type Provider interface {
 	// It returns the name of the provider to update the routing rules.
 	Events(ctx context.Context) <-chan string
 
-	// Rules returns the routing rules.
-	Rules(ctx context.Context) ([]*Rule, error)
+	// State returns the current state of the provider.
+	State(ctx context.Context) (*State, error)
+}
 
-	// Upstreams returns the upstreams.
-	Upstreams(ctx context.Context) ([]Upstream, error)
+// State contains the state of the provider.
+type State struct {
+	// Name is the name of the provider.
+	Name string
+
+	// Rules contains the routing rules.
+	Rules []*Rule
+
+	// Upstreams contains the upstreams.
+	Upstreams []Upstream
 }
 
 // Mock contains the details of how the handler should reply to the downstream.
@@ -50,6 +59,9 @@ type Rule struct {
 
 	// Mock defines the details of how the handler should reply to the downstream.
 	Mock *Mock
+
+	// Forward specifies the upstream to forward the request.
+	Forward Upstream
 }
 
 // String returns the name of the rule.
