@@ -10,6 +10,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
+	"bytes"
 )
 
 //go:generate moq -out mock_provider.go -fmt goimports . Provider
@@ -18,8 +19,9 @@ import (
 type Service struct {
 	Providers []Provider
 
-	rules []*Rule
-	mu    sync.RWMutex
+	upstreams []Upstream
+	rules     []*Rule
+	mu        sync.RWMutex
 }
 
 // Run starts a blocking loop that updates the routing rules
@@ -43,8 +45,11 @@ func (s *Service) Run(ctx context.Context) (err error) {
 			slog.DebugContext(ctx, "new event update received", slog.String("event", ev))
 
 			rules := s.mergeRules(ctx)
+			upstreams := s.mergeUpstreams(ctx)
 			s.mu.Lock()
 			s.rules = rules
+			s.closeUpstreams(ctx)
+			s.upstreams = upstreams
 			s.mu.Unlock()
 		}
 	}
@@ -78,6 +83,22 @@ func (s *Service) mergeRules(ctx context.Context) []*Rule {
 	return rules
 }
 
+func (s *Service) mergeUpstreams(ctx context.Context) []Upstream {
+	var upstreams []Upstream
+	for _, p := range s.Providers {
+		us, err := p.Upstreams(ctx)
+		if err != nil {
+			slog.ErrorContext(ctx, "failed to get upstreams",
+				slog.String("provider", p.Name()),
+				slogx.Error(err))
+			continue
+		}
+		upstreams = append(upstreams, us...)
+	}
+
+	return upstreams
+}
+
 // MatchMetadata matches the given gRPC request to an upstream connection.
 func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
 	s.mu.RLock()
@@ -91,6 +112,26 @@ func (s *Service) MatchMetadata(uri string, md metadata.MD) Matches {
 	}
 
 	return matches
+}
+
+// Upstreams returns the list of upstream connections.
+func (s *Service) Upstreams() []Upstream {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.upstreams
+}
+
+func (s *Service) closeUpstreams(ctx context.Context) {
+	for _, u := range s.upstreams {
+		slog.DebugContext(ctx, "closing upstream connection", slog.String("upstream", u.Name()))
+
+		if err := u.Close(); err != nil {
+			slog.WarnContext(ctx, "failed to close upstream connection",
+				slog.String("upstream", u.Name()),
+				slogx.Error(err))
+		}
+	}
 }
 
 // Matches is a set of matches.
@@ -124,7 +165,7 @@ func (m Matches) MatchMessage(bts []byte) (*Rule, bool) {
 			continue
 		}
 
-		if string(expectedBts) == string(bts) {
+		if bytes.Equal(bts, expectedBts) {
 			return rule, true
 		}
 	}

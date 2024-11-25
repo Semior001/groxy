@@ -1,4 +1,4 @@
-package proxy
+package grpcx
 
 import (
 	"fmt"
@@ -17,15 +17,16 @@ func (RawBytesCodec) Marshal(v any) ([]byte, error) {
 		return nil, nil
 	}
 
-	if msg, ok := v.(proto.Message); ok {
-		return proto.Marshal(msg)
+	switch v := v.(type) {
+	case []byte:
+		return v, nil
+	case *[]byte:
+		return *v, nil
+	case proto.Message:
+		return proto.Marshal(v)
+	default:
+		return nil, fmt.Errorf("failed to marshal: %v is of type %T, not *[]byte, nor proto.Message", v, v)
 	}
-
-	if bts, ok := v.(*[]byte); ok {
-		return *bts, nil
-	}
-
-	return nil, fmt.Errorf("failed to marshal: %v is not type of *[]byte, nor proto.Message", v)
 }
 
 // Unmarshal sets the received bytes as is to the target.
@@ -34,16 +35,15 @@ func (RawBytesCodec) Unmarshal(data []byte, v any) error {
 		return nil
 	}
 
-	if bts, ok := v.(proto.Message); ok {
-		return proto.Unmarshal(data, bts)
-	}
-
-	if bts, ok := v.(*[]byte); ok {
-		*bts = data
+	switch v := v.(type) {
+	case *[]byte:
+		*v = data
 		return nil
+	case proto.Message:
+		return proto.Unmarshal(data, v)
+	default:
+		return fmt.Errorf("failed to unmarshal: %v is of type %T, not *[]byte, nor proto.Message", v, v)
 	}
-
-	return fmt.Errorf("failed to unmarshal: %v is not type of *[]byte, nor proto.Message", v)
 }
 
 // Name returns the name of the codec.

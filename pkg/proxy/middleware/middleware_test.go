@@ -42,7 +42,7 @@ func TestRecoverer(t *testing.T) {
 	var err error
 	require.NotPanics(t, func() {
 		err = mw(nil, &mocks.ServerStreamMock{
-			ContextFunc: func() context.Context { return context.Background() },
+			ContextFunc: context.Background,
 		})
 	})
 	st, ok := status.FromError(err)
@@ -71,7 +71,7 @@ func TestChain(t *testing.T) {
 			return next(srv, stream)
 		}
 	}
-	h := Chain(func(_ any, _ grpc.ServerStream) error { return nil }, mw1, mw2, mw3)
+	h := Wrap(func(_ any, _ grpc.ServerStream) error { return nil }, mw1, mw2, mw3)
 	require.NoError(t, h(nil, nil))
 	assert.Equal(t, []string{"mw1", "mw2", "mw3"}, calls)
 }

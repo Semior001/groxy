@@ -3,6 +3,18 @@ package groxy.runtime_generated;
 
 option go_package = "github.com/Semior001/groxy/pkg/protodef/testdata;testdata";
 
+service TestService {
+  rpc TestMethod(Request) returns (Response) {}
+}
+
+service OtherService {
+  rpc OtherMethod(Nested) returns (Response) {}
+}
+
+message Request {
+  string value = 1;
+}
+
 message Nested {
   Enum enum = 1;
   string nested_value = 6;

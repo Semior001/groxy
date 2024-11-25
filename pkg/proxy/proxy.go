@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -26,6 +27,7 @@ type ServerStream grpc.ServerStream
 // registered rules.
 type Matcher interface {
 	MatchMetadata(string, metadata.MD) discovery.Matches
+	Upstreams() []discovery.Upstream
 }
 
 // Server is a gRPC server.
@@ -36,15 +38,18 @@ type Server struct {
 	defaultResponder func(stream grpc.ServerStream, firstRecv []byte) error
 	matcher          Matcher
 
-	debug bool
-	l     net.Listener
-	grpc  *grpc.Server
+	signature  bool
+	reflection bool
+	debug      bool
+	l          net.Listener
+	grpc       *grpc.Server
 }
 
 // NewServer creates a new server.
 func NewServer(m Matcher, opts ...Option) *Server {
 	s := &Server{
-		matcher: m,
+		matcher:   m,
+		signature: false,
 		defaultResponder: func(_ grpc.ServerStream, _ []byte) error {
 			return status.Error(codes.Internal, "{groxy} didn't match request to any rule")
 		},
@@ -64,12 +69,19 @@ func (s *Server) Listen(addr string) (err error) {
 	defer slog.Warn("gRPC server stopped", slogx.Error(err))
 
 	s.grpc = grpc.NewServer(append(s.serverOpts,
-		grpc.UnknownServiceHandler(middleware.Chain(s.handle,
+		grpc.UnknownServiceHandler(middleware.Wrap(s.handle,
 			middleware.Recoverer(),
-			middleware.AppInfo("groxy", "Semior001", s.version),
-			middleware.Log(s.debug),
+			middleware.Maybe(s.signature, middleware.AppInfo("groxy", "Semior001", s.version)),
+			middleware.Log(s.debug, "/grpc.reflection."),
+			middleware.Maybe(s.reflection, middleware.Chain(
+				middleware.PassMetadata(),
+				middleware.Reflector{
+					Logger:        slog.Default().With(slog.String("subsystem", "reflection")),
+					UpstreamsFunc: s.matcher.Upstreams,
+				}.Middleware,
+			)),
 		)),
-		grpc.ForceServerCodec(RawBytesCodec{}),
+		grpc.ForceServerCodec(grpcx.RawBytesCodec{}),
 	)...)
 
 	if s.l, err = net.Listen("tcp", addr); err != nil {

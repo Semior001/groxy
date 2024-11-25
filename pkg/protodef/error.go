@@ -15,9 +15,9 @@ func (e errMultipleTarget) Error() string {
 }
 
 func (e errMultipleTarget) Is(target error) bool {
-	var errMultipleTarget errMultipleTarget
-	ok := errors.As(target, &errMultipleTarget)
-	return ok && slices.Equal(e, errMultipleTarget)
+	var emt errMultipleTarget
+	ok := errors.As(target, &emt)
+	return ok && slices.Equal(e, emt)
 }
 
 type errSyntax struct {
