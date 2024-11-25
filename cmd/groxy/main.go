@@ -118,8 +118,8 @@ func run(ctx context.Context) error {
 	return nil
 }
 
-func setupLog(debug, json bool) {
-	defer slog.Info("prepared logger", slog.Bool("debug", debug), slog.Bool("json", json))
+func setupLog(dbg, json bool) {
+	defer slog.Info("prepared logger", slog.Bool("debug", dbg), slog.Bool("json", json))
 
 	tintOpts := func(opts *slog.HandlerOptions, timeFormat string) *tint.Options {
 		return &tint.Options{
@@ -133,7 +133,7 @@ func setupLog(debug, json bool) {
 
 	timeFormat := time.DateTime
 	handlerOpts := &slog.HandlerOptions{Level: slog.LevelInfo}
-	if debug {
+	if dbg {
 		timeFormat = time.RFC3339Nano
 		handlerOpts.Level = slog.LevelDebug
 		handlerOpts.AddSource = true

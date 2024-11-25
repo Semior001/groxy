@@ -10,6 +10,7 @@ import (
 	"github.com/samber/lo"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
+	"bytes"
 )
 
 //go:generate moq -out mock_provider.go -fmt goimports . Provider
@@ -164,7 +165,7 @@ func (m Matches) MatchMessage(bts []byte) (*Rule, bool) {
 			continue
 		}
 
-		if string(expectedBts) == string(bts) {
+		if bytes.Equal(bts, expectedBts) {
 			return rule, true
 		}
 	}

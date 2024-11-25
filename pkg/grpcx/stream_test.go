@@ -56,7 +56,7 @@ func TestPipe(t *testing.T) {
 
 				desc := &grpc.StreamDesc{
 					StreamName: method,
-					Handler: func(srv any, stream grpc.ServerStream) error {
+					Handler: func(any, grpc.ServerStream) error {
 						t.Error("unexpected call to handler")
 						t.FailNow()
 						return nil
@@ -136,7 +136,7 @@ func TestPipe(t *testing.T) {
 
 				desc := &grpc.StreamDesc{
 					StreamName: method,
-					Handler: func(srv any, stream grpc.ServerStream) error {
+					Handler: func(any, grpc.ServerStream) error {
 						t.Error("unexpected call to handler")
 						t.FailNow()
 						return nil

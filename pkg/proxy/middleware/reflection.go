@@ -38,7 +38,6 @@ type SRIClient struct {
 }
 
 // Middleware returns a middleware that reflects the request to the upstreams.
-// Requires consumer to force grpcx.RawBytesCodec.
 //goland:noinspection GoDeprecation
 func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 	if r.Logger == nil {
@@ -46,7 +45,6 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 	}
 
 	return func(srv any, clientStream grpc.ServerStream) error {
-		upstreams := r.UpstreamsFunc()
 		ctx := clientStream.Context()
 
 		method, ok := grpc.Method(ctx)
@@ -55,6 +53,13 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 		}
 
 		alpha := strings.HasPrefix(method, "/grpc.reflection.v1alpha")
+
+		upstreams := r.UpstreamsFunc()
+		for idx, up := range upstreams { // skip the reflection-disabled upstreams
+			if !up.Reflection() {
+				upstreams = append(upstreams[:idx], upstreams[idx+1:]...)
+			}
+		}
 
 		clients := make([]SRIClient, len(upstreams))
 		defer func() {

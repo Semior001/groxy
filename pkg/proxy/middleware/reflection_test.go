@@ -1,3 +1,4 @@
+//nolint:staticcheck // this file contains references to deprecated reflection API
 package middleware
 
 import (
@@ -20,10 +21,10 @@ import (
 
 func TestReflector_MiddlewareUpstreamError(t *testing.T) {
 	backend := grpc.NewServer(grpc.StreamInterceptor(func(
-		srv any,
-		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
-		handler grpc.StreamHandler,
+		any,
+		grpc.ServerStream,
+		*grpc.StreamServerInfo,
+		grpc.StreamHandler,
 	) error {
 		return status.Error(codes.PermissionDenied, "access denied")
 	}))
@@ -35,7 +36,7 @@ func TestReflector_MiddlewareUpstreamError(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, upstreamConn.Close()) })
 
-	errHandler := func(srv any, stream grpc.ServerStream) error {
+	errHandler := func(any, grpc.ServerStream) error {
 		return status.Error(codes.Internal, "should not be called")
 	}
 
@@ -101,7 +102,7 @@ func TestReflector_Middleware(t *testing.T) {
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, conn2.Close()) })
 
-	errHandler := func(srv any, stream grpc.ServerStream) error {
+	errHandler := func(any, grpc.ServerStream) error {
 		return status.Error(codes.Internal, "should not be called")
 	}
 

@@ -42,7 +42,7 @@ func TestRecoverer(t *testing.T) {
 	var err error
 	require.NotPanics(t, func() {
 		err = mw(nil, &mocks.ServerStreamMock{
-			ContextFunc: func() context.Context { return context.Background() },
+			ContextFunc: context.Background,
 		})
 	})
 	st, ok := status.FromError(err)

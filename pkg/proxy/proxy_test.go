@@ -19,7 +19,7 @@ import (
 
 func TestServer_handle(t *testing.T) {
 	matcher := &mocks.MatcherMock{
-		MatchMetadataFunc: func(s string, md metadata.MD) discovery.Matches {
+		MatchMetadataFunc: func(string, metadata.MD) discovery.Matches {
 			return discovery.Matches{
 				{
 					Name: "groxy.runtime_generated.TestService/TestMethod (mock with status)",

@@ -87,12 +87,12 @@ func TestMatches_MatchMessage(t *testing.T) {
 func TestService_Run(t *testing.T) {
 	p1 := &ProviderMock{
 		NameFunc: func() string { return "p1" },
-		EventsFunc: func(ctx context.Context) <-chan string {
+		EventsFunc: func(context.Context) <-chan string {
 			res := make(chan string, 1)
 			res <- "file:/file1"
 			return res
 		},
-		RulesFunc: func(ctx context.Context) ([]*Rule, error) {
+		RulesFunc: func(context.Context) ([]*Rule, error) {
 			return []*Rule{
 				{Name: "1", Match: RequestMatcher{}},
 				{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
@@ -102,10 +102,10 @@ func TestService_Run(t *testing.T) {
 	}
 	p2 := &ProviderMock{
 		NameFunc: func() string { return "p2" },
-		EventsFunc: func(ctx context.Context) <-chan string {
+		EventsFunc: func(context.Context) <-chan string {
 			return make(chan string, 1)
 		},
-		RulesFunc: func(ctx context.Context) ([]*Rule, error) {
+		RulesFunc: func(context.Context) ([]*Rule, error) {
 			return []*Rule{
 				{Name: "3", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{
 					"uri":  "test",
@@ -117,10 +117,10 @@ func TestService_Run(t *testing.T) {
 	}
 	p3 := &ProviderMock{
 		NameFunc: func() string { return "p3" },
-		EventsFunc: func(ctx context.Context) <-chan string {
+		EventsFunc: func(context.Context) <-chan string {
 			return make(chan string, 1)
 		},
-		RulesFunc: func(ctx context.Context) ([]*Rule, error) {
+		RulesFunc: func(context.Context) ([]*Rule, error) {
 			return nil, errors.New("failed to get rules")
 		},
 		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },

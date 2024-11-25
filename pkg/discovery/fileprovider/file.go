@@ -20,6 +20,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/credentials"
 	"crypto/tls"
+	"sort"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -160,7 +161,7 @@ func (d *File) Rules(context.Context) ([]*discovery.Rule, error) {
 		return result, nil
 	}
 
-	var rules []*discovery.Rule
+	rules := make([]*discovery.Rule, 0, len(cfg.Rules)+1)
 	for idx, r := range cfg.Rules {
 		rule, err := parseRule(r)
 		if err != nil {
@@ -229,6 +230,8 @@ func (d *File) Upstreams(ctx context.Context) ([]discovery.Upstream, error) {
 			ClientConn:      cc,
 		})
 	}
+
+	sort.Slice(res, func(i, j int) bool { return res[i].Name() < res[j].Name() })
 
 	return res, nil
 }

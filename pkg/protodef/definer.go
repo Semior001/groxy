@@ -169,7 +169,7 @@ func (b *Definer) parseDefinition(def string) (*desc.FileDescriptor, error) {
 }
 
 func (b *Definer) findTarget(fd *desc.FileDescriptor) (*desc.MessageDescriptor, error) {
-	var targets []*desc.MessageDescriptor
+	var targets []*desc.MessageDescriptor //nolint:prealloc // we expect only one target
 	for _, md := range fd.GetMessageTypes() {
 		b, ok := proto.GetExtension(protoadapt.MessageV2Of(md.GetOptions()), groxypb.E_Target).(bool)
 		if !ok || !b {
@@ -334,7 +334,7 @@ func (b *Definer) buildRepeated(field fieldDescriptor, s string) (any, error) {
 		return sl.Interface(), nil
 	}
 
-	var result []*dynamic.Message
+	result := make([]*dynamic.Message, 0, len(iface))
 	for _, v := range iface {
 		bts, err := json.Marshal(v)
 		if err != nil {

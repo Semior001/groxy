@@ -1,15 +1,38 @@
 run:
-  tests: false
-  output:
-    format: tab
-  skip-dirs:
-    - vendor
+  timeout: 5m
+
+linters-settings:
+  govet:
+    enable:
+      - shadow
+  goconst:
+    min-len: 2
+    min-occurrences: 2
+  misspell:
+    locale: US
+  lll:
+    line-length: 140
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - wrapperFunc
+      - hugeParam
+      - rangeValCopy
+      - singleCaseSwitch
+      - ifElseChain
 
 linters:
+  disable-all: true
+  fast: false
   enable:
     - unconvert
-    - megacheck
-    - gas
+    - gosimple
+    - staticcheck
+    - unused
+    - gosec
     - gocyclo
     - dupl
     - misspell
@@ -17,11 +40,30 @@ linters:
     - typecheck
     - ineffassign
     - revive
-  disable-all: true
-
+    - staticcheck
+    - govet
+    - stylecheck
+    - gochecknoinits
+    - gocritic
+    - nakedret
+    - prealloc
 issues:
+  exclude-dirs:
+    - vendor
   exclude-use-default: false
-  # supress duplicating struct tags in staticcheck
   exclude-rules:
-      - linters: [staticcheck]
-        text: "SA5008: duplicate struct tag"
+      # tests can be insecure and can duplicate code
+      - path: _test\.go
+        linters:
+          - gosec
+          - dupl
+      # duplicated struct tag can be found in CLI flags, for instance, it's OK
+      - text: "SA5008: duplicate struct tag"
+        linters:
+          - staticcheck
+
+      # we can shadow errors
+      - text: "shadow: declaration of \"err\" shadows declaration"
+        linters:
+          - govet
+

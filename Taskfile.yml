@@ -12,10 +12,21 @@ tasks:
       GROXY_VERSION=$(git describe --tags --long)
       go install -ldflags "-X 'main.version=$GROXY_VERSION-local' -s -w" ./cmd/...
 
+  check:
+    desc: "run all CI/CD checks"
+    deps:
+      - test
+      - lint
+
   lint:
     desc: "lint"
     cmds:
       - golangci-lint run --config=.golangci.yml --timeout=5m ./...
+
+  test:
+    desc: "run tests"
+    cmd: |
+      go test -race -count=1 ./...
 
   gen:
     desc: "generate all"
