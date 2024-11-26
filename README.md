@@ -208,6 +208,8 @@ message SomeMessage {
 }
 ```
 
+Depending on your use case, you may find different approaches useful. For instance, if you can have multiple objects of the same type, you may specify values in the options of the nested message definition itself rather than in the parent message. On the other hand, defining an exact value in the parent message is useful if you want to get different values for the nested message in different fields.
+
 #### enums
 
 For enums, the value should be set as a string name of the enum value:
