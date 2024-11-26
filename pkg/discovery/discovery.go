@@ -24,11 +24,20 @@ type Provider interface {
 	// It returns the name of the provider to update the routing rules.
 	Events(ctx context.Context) <-chan string
 
-	// Rules returns the routing rules.
-	Rules(ctx context.Context) ([]*Rule, error)
+	// State returns the current state of the provider.
+	State(ctx context.Context) (*State, error)
+}
 
-	// Upstreams returns the upstreams.
-	Upstreams(ctx context.Context) ([]Upstream, error)
+// State contains the state of the provider.
+type State struct {
+	// Name is the name of the provider.
+	Name string
+
+	// Rules contains the routing rules.
+	Rules []*Rule
+
+	// Upstreams contains the upstreams.
+	Upstreams []Upstream
 }
 
 // Mock contains the details of how the handler should reply to the downstream.
@@ -50,6 +59,16 @@ type Rule struct {
 
 	// Mock defines the details of how the handler should reply to the downstream.
 	Mock *Mock
+
+	// Forward specifies the upstream to forward the request.
+	Forward *Forward
+}
+
+// Forward specifies the upstream to forward the request and the parameters
+// to invoke the upstream.
+type Forward struct {
+	Upstream Upstream
+	Header   metadata.MD
 }
 
 // String returns the name of the rule.
@@ -107,15 +126,15 @@ type Upstream interface {
 	grpc.ClientConnInterface
 }
 
-// NamedClosableClientConn is a named closable client connection.
-type NamedClosableClientConn struct {
+// ClientConn is a named closable client connection.
+type ClientConn struct {
 	ConnName        string
 	ServeReflection bool
 	*grpc.ClientConn
 }
 
 // Name returns the name of the connection.
-func (n NamedClosableClientConn) Name() string { return n.ConnName }
+func (n ClientConn) Name() string { return n.ConnName }
 
 // Reflection returns true if the connection serves reflection.
-func (n NamedClosableClientConn) Reflection() bool { return n.ServeReflection }
+func (n ClientConn) Reflection() bool { return n.ServeReflection }

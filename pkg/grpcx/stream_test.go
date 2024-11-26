@@ -71,8 +71,9 @@ func TestPipe(t *testing.T) {
 
 				bts, err := proto.Marshal(&grpctest.StreamRequest{Value: "pre-hello"})
 				require.NoError(t, err)
+				require.NoError(t, cs.SendMsg(bts))
 
-				err = Pipe(cs, stream, Message{Value: bts, Direction: ClientToServer})
+				err = Pipe(cs, stream)
 				if errors.Is(err, io.EOF) {
 					return nil
 				}

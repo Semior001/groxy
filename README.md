@@ -111,7 +111,7 @@ Upstreams section is a key-value map of upstreams, where key is the name of the 
 | tls              | optional | The TLS configuration for the upstream. The TLS configuration consists of the following fields:                                                             |
 | serve-reflection | optional | The flag that indicates whether the upstream's responses should be included in the gRPC reflection responses. No-op if `--reflection` flag is not provided. |
 
-Rules are defined in the rules section. Each rule consists of the following fields:
+Rules are defined in the rules section. Either `respond` or `forward` must be defined Each rule consists of the following fields:
 
 | Field            | Required | Description                                                                                                                   |
 |------------------|----------|-------------------------------------------------------------------------------------------------------------------------------|
@@ -119,7 +119,8 @@ Rules are defined in the rules section. Each rule consists of the following fiel
 | match.uri        | true     | The URI matcher for the request. The URI matcher is a regular expression that matches the URI of the request.                 |
 | match.header     | optional | a map of headers that should be present in the request.                                                                       |
 | match.body       | optional | The body matcher for the request. This must be a protobuf snippet that defines the request message with values to be matched. |
-| respond          | true     | The respond section contains the response for the request.                                                                    |
+| respond          | optional | The respond section contains the response for the request.                                                                    |
+| forward          | optional | The forward section contains the upstream to which request should be forwarded to.                                            |
 
 The `Respond` section contains the response for the request. The respond section may contain the following fields:
 
@@ -130,6 +131,13 @@ The `Respond` section contains the response for the request. The respond section
 | status      | optional                   | The gRPC status to be sent as a response.                                                                           |
 | status.code | true, if status is present | The gRPC status code to be sent as a response.                                                                      |
 | status.msg  | true, if status is present | The gRPC status message to be sent as a response.                                                                   |
+
+The `Forward` section contains the upstream to which the request should be forwarded. The forward section may contain the following fields:
+
+| Field    | Required | Description                                                        |
+|----------|----------|--------------------------------------------------------------------|
+| upstream | true     | The name of the upstream to which the request should be forwarded. |
+| header   | optional | The headers to be sent with the request.                           |
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 

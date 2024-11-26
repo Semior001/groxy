@@ -117,7 +117,7 @@ func (r Reflector) Middleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 			resp, err := r.reflect(ctx, r.asV1Request(recv), clients)
 			if err != nil {
-				if st := grpcx.StatusFromError(err); st != nil && clientCode(st.Code()) {
+				if st := grpcx.StatusFromError(err); st != nil && grpcx.ClientCode(st.Code()) {
 					return status.Errorf(st.Code(), "{groxy} received from one of upstreams: %s", st.Message())
 				}
 				r.Logger.WarnContext(ctx, "failed to reflect", slogx.Error(err))
@@ -389,21 +389,4 @@ func (r Reflector) asV1AlphaResponse(req any, resp *rapi1.ServerReflectionRespon
 	}
 
 	return result
-}
-
-func clientCode(code codes.Code) bool {
-	switch code {
-	case codes.Canceled,
-		codes.Unknown,
-		codes.DeadlineExceeded,
-		codes.PermissionDenied,
-		codes.ResourceExhausted,
-		codes.Aborted,
-		codes.Unimplemented,
-		codes.Unavailable,
-		codes.Unauthenticated:
-		return true
-	default:
-		return false
-	}
 }

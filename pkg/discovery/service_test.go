@@ -92,38 +92,33 @@ func TestService_Run(t *testing.T) {
 			res <- "file:/file1"
 			return res
 		},
-		RulesFunc: func(context.Context) ([]*Rule, error) {
-			return []*Rule{
+		StateFunc: func(context.Context) (*State, error) {
+			return &State{Rules: []*Rule{
 				{Name: "1", Match: RequestMatcher{}},
 				{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
-			}, nil
+			}}, nil
 		},
-		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
 	}
 	p2 := &ProviderMock{
 		NameFunc: func() string { return "p2" },
 		EventsFunc: func(context.Context) <-chan string {
 			return make(chan string, 1)
 		},
-		RulesFunc: func(context.Context) ([]*Rule, error) {
-			return []*Rule{
+		StateFunc: func(context.Context) (*State, error) {
+			return &State{Rules: []*Rule{
 				{Name: "3", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{
 					"uri":  "test",
 					"uri2": "test2",
 				})}},
-			}, nil
+			}}, nil
 		},
-		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
 	}
 	p3 := &ProviderMock{
 		NameFunc: func() string { return "p3" },
 		EventsFunc: func(context.Context) <-chan string {
 			return make(chan string, 1)
 		},
-		RulesFunc: func(context.Context) ([]*Rule, error) {
-			return nil, errors.New("failed to get rules")
-		},
-		UpstreamsFunc: func(context.Context) ([]Upstream, error) { return nil, nil },
+		StateFunc: func(context.Context) (*State, error) { return nil, errors.New("failed to get rules") },
 	}
 
 	svc := &Service{Providers: []Provider{p1, p2, p3}}

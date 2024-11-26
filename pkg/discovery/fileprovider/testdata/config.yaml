@@ -67,3 +67,6 @@ rules:
       metadata:
         header: { X-Request-Id: "123" }
         trailer: { Powered-By: "groxy" }
+
+  - match: { uri: "com.github.Semior001.groxy.example.mock.Upstream/Get" }
+    forward: { upstream: example-1 }

@@ -43,7 +43,7 @@ func TestReflector_MiddlewareUpstreamError(t *testing.T) {
 	mw := Reflector{
 		UpstreamsFunc: func() []discovery.Upstream {
 			return []discovery.Upstream{
-				discovery.NamedClosableClientConn{
+				discovery.ClientConn{
 					ConnName:        "backend",
 					ServeReflection: true,
 					ClientConn:      upstreamConn,
@@ -109,12 +109,12 @@ func TestReflector_Middleware(t *testing.T) {
 	mw := Reflector{
 		UpstreamsFunc: func() []discovery.Upstream {
 			return []discovery.Upstream{
-				discovery.NamedClosableClientConn{
+				discovery.ClientConn{
 					ConnName:        "backend1",
 					ServeReflection: true,
 					ClientConn:      conn1,
 				},
-				discovery.NamedClosableClientConn{
+				discovery.ClientConn{
 					ConnName:        "backend2",
 					ServeReflection: true,
 					ClientConn:      conn2,

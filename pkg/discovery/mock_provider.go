@@ -24,11 +24,8 @@ var _ Provider = &ProviderMock{}
 // 			NameFunc: func() string {
 // 				panic("mock out the Name method")
 // 			},
-// 			RulesFunc: func(ctx context.Context) ([]*Rule, error) {
-// 				panic("mock out the Rules method")
-// 			},
-// 			UpstreamsFunc: func(ctx context.Context) ([]Upstream, error) {
-// 				panic("mock out the Upstreams method")
+// 			StateFunc: func(ctx context.Context) (*State, error) {
+// 				panic("mock out the State method")
 // 			},
 // 		}
 //
@@ -43,11 +40,8 @@ type ProviderMock struct {
 	// NameFunc mocks the Name method.
 	NameFunc func() string
 
-	// RulesFunc mocks the Rules method.
-	RulesFunc func(ctx context.Context) ([]*Rule, error)
-
-	// UpstreamsFunc mocks the Upstreams method.
-	UpstreamsFunc func(ctx context.Context) ([]Upstream, error)
+	// StateFunc mocks the State method.
+	StateFunc func(ctx context.Context) (*State, error)
 
 	// calls tracks calls to the methods.
 	calls struct {
@@ -59,21 +53,15 @@ type ProviderMock struct {
 		// Name holds details about calls to the Name method.
 		Name []struct {
 		}
-		// Rules holds details about calls to the Rules method.
-		Rules []struct {
-			// Ctx is the ctx argument value.
-			Ctx context.Context
-		}
-		// Upstreams holds details about calls to the Upstreams method.
-		Upstreams []struct {
+		// State holds details about calls to the State method.
+		State []struct {
 			// Ctx is the ctx argument value.
 			Ctx context.Context
 		}
 	}
-	lockEvents    sync.RWMutex
-	lockName      sync.RWMutex
-	lockRules     sync.RWMutex
-	lockUpstreams sync.RWMutex
+	lockEvents sync.RWMutex
+	lockName   sync.RWMutex
+	lockState  sync.RWMutex
 }
 
 // Events calls EventsFunc.
@@ -133,64 +121,33 @@ func (mock *ProviderMock) NameCalls() []struct {
 	return calls
 }
 
-// Rules calls RulesFunc.
-func (mock *ProviderMock) Rules(ctx context.Context) ([]*Rule, error) {
-	if mock.RulesFunc == nil {
-		panic("ProviderMock.RulesFunc: method is nil but Provider.Rules was just called")
+// State calls StateFunc.
+func (mock *ProviderMock) State(ctx context.Context) (*State, error) {
+	if mock.StateFunc == nil {
+		panic("ProviderMock.StateFunc: method is nil but Provider.State was just called")
 	}
 	callInfo := struct {
 		Ctx context.Context
 	}{
 		Ctx: ctx,
 	}
-	mock.lockRules.Lock()
-	mock.calls.Rules = append(mock.calls.Rules, callInfo)
-	mock.lockRules.Unlock()
-	return mock.RulesFunc(ctx)
+	mock.lockState.Lock()
+	mock.calls.State = append(mock.calls.State, callInfo)
+	mock.lockState.Unlock()
+	return mock.StateFunc(ctx)
 }
 
-// RulesCalls gets all the calls that were made to Rules.
+// StateCalls gets all the calls that were made to State.
 // Check the length with:
-//     len(mockedProvider.RulesCalls())
-func (mock *ProviderMock) RulesCalls() []struct {
+//     len(mockedProvider.StateCalls())
+func (mock *ProviderMock) StateCalls() []struct {
 	Ctx context.Context
 } {
 	var calls []struct {
 		Ctx context.Context
 	}
-	mock.lockRules.RLock()
-	calls = mock.calls.Rules
-	mock.lockRules.RUnlock()
-	return calls
-}
-
-// Upstreams calls UpstreamsFunc.
-func (mock *ProviderMock) Upstreams(ctx context.Context) ([]Upstream, error) {
-	if mock.UpstreamsFunc == nil {
-		panic("ProviderMock.UpstreamsFunc: method is nil but Provider.Upstreams was just called")
-	}
-	callInfo := struct {
-		Ctx context.Context
-	}{
-		Ctx: ctx,
-	}
-	mock.lockUpstreams.Lock()
-	mock.calls.Upstreams = append(mock.calls.Upstreams, callInfo)
-	mock.lockUpstreams.Unlock()
-	return mock.UpstreamsFunc(ctx)
-}
-
-// UpstreamsCalls gets all the calls that were made to Upstreams.
-// Check the length with:
-//     len(mockedProvider.UpstreamsCalls())
-func (mock *ProviderMock) UpstreamsCalls() []struct {
-	Ctx context.Context
-} {
-	var calls []struct {
-		Ctx context.Context
-	}
-	mock.lockUpstreams.RLock()
-	calls = mock.calls.Upstreams
-	mock.lockUpstreams.RUnlock()
+	mock.lockState.RLock()
+	calls = mock.calls.State
+	mock.lockState.RUnlock()
 	return calls
 }

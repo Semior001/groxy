@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"github.com/Semior001/groxy/pkg/grpcx"
+	"context"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -73,8 +74,8 @@ func (s *Server) Listen(addr string) (err error) {
 			middleware.Recoverer(),
 			middleware.Maybe(s.signature, middleware.AppInfo("groxy", "Semior001", s.version)),
 			middleware.Log(s.debug, "/grpc.reflection."),
+			middleware.PassMetadata(),
 			middleware.Maybe(s.reflection, middleware.Chain(
-				middleware.PassMetadata(),
 				middleware.Reflector{
 					Logger:        slog.Default().With(slog.String("subsystem", "reflection")),
 					UpstreamsFunc: s.matcher.Upstreams,
@@ -119,23 +120,105 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 
 	slog.DebugContext(ctx, "found matches", slog.Any("matches", matches))
 
+	var firstRecv []byte
+
 	match := matches[0]
 	if matches.NeedsDeeperMatch() {
-		var bts []byte
-
-		if err := stream.RecvMsg(&bts); err != nil {
+		if err := stream.RecvMsg(&firstRecv); err != nil {
 			slog.WarnContext(ctx, "failed to read the first RECV", slogx.Error(err))
 			return s.defaultResponder(stream, nil)
 		}
 
-		if match, ok = matches.MatchMessage(bts); !ok {
-			return s.defaultResponder(stream, bts)
+		if match, ok = matches.MatchMessage(firstRecv); !ok {
+			return s.defaultResponder(stream, firstRecv)
 		}
 	}
 
 	slog.DebugContext(ctx, "matched", slog.Any("match", match))
 
+	if match.Forward != nil {
+		return s.forward(stream, match.Forward, firstRecv)
+	}
+
 	return s.mock(stream, match.Mock)
+}
+
+func (s *Server) forward(stream grpc.ServerStream, forward *discovery.Forward, recv []byte) error {
+	ctx := stream.Context()
+	ctx = plantHeader(ctx, forward.Header)
+
+	mtd, _ := grpc.Method(ctx)
+	desc := &grpc.StreamDesc{ClientStreams: true, ServerStreams: true}
+
+	upstreamHeader, upstreamTrailer := metadata.New(nil), metadata.New(nil)
+
+	upstream, err := forward.Upstream.NewStream(ctx, desc, mtd,
+		grpc.ForceCodec(grpcx.RawBytesCodec{}),
+		grpc.Header(&upstreamHeader),
+		grpc.Trailer(&upstreamTrailer))
+	if err != nil {
+		return status.Errorf(codes.Internal, "{groxy} failed to create upstream: %v", err)
+	}
+
+	if recv != nil {
+		if err = upstream.SendMsg(recv); err != nil {
+			return status.Errorf(codes.Internal, "{groxy} failed to send the first message to the upstream: %v",
+				err)
+		}
+	}
+
+	defer func() {
+		stream.SetTrailer(metadata.Join(upstreamHeader, upstreamTrailer))
+
+		if err = upstream.CloseSend(); err != nil {
+			slog.WarnContext(ctx, "failed to close the upstream",
+				slog.String("upstream_name", forward.Upstream.Name()),
+				slogx.Error(err))
+		}
+	}()
+
+	if err = grpcx.Pipe(upstream, stream); err != nil {
+		if errors.Is(err, io.EOF) {
+			return eofStatus(upstream)
+		}
+		if st := grpcx.StatusFromError(err); st != nil {
+			return st.Err()
+		}
+		slog.WarnContext(ctx, "failed to pipe",
+			slog.String("upstream_name", forward.Upstream.Name()),
+			slogx.Error(err))
+		return status.Errorf(codes.Internal, "{groxy} failed to pipe messages to the upstream")
+	}
+
+	return nil
+}
+
+func eofStatus(upstream grpc.ClientStream) (err error) {
+	if err = upstream.RecvMsg(nil); err == nil {
+		return status.Error(codes.Internal, "{groxy} unexpected EOF from the upstream")
+	}
+	if st := grpcx.StatusFromError(err); st != nil {
+		return st.Err()
+	}
+	if !errors.Is(err, io.EOF) {
+		return status.Errorf(codes.Internal, "{groxy} failed to read the EOF from the upstream: %v", err)
+	}
+	return nil // if there is just EOF then probably everything is fine
+}
+
+func plantHeader(ctx context.Context, header metadata.MD) context.Context {
+	outMD, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		outMD = metadata.New(nil)
+	}
+
+	for k, v := range header {
+		if _, ok = outMD[k]; !ok {
+			outMD[k] = v
+		}
+	}
+
+	return metadata.NewOutgoingContext(ctx, outMD)
 }
 
 func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {
