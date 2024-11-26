@@ -177,26 +177,33 @@ func (s *Server) forward(stream grpc.ServerStream, forward *discovery.Forward, r
 		}
 	}()
 
-	switch err = grpcx.Pipe(upstream, stream); {
-	case errors.Is(err, io.EOF):
-		if err = upstream.RecvMsg(nil); err != nil {
-			if st := grpcx.StatusFromError(err); st != nil {
-				return st.Err()
-			}
-			if errors.Is(err, io.EOF) {
-				return nil // if there is just EOF then probably everything is fine
-			}
-			return status.Errorf(codes.Internal, "{groxy} failed to read the EOF from the upstream: %v", err)
+	if err = grpcx.Pipe(upstream, stream); err != nil {
+		if errors.Is(err, io.EOF) {
+			return eofStatus(upstream)
 		}
-		return status.Error(codes.Internal, "{groxy} unexpected EOF from the upstream")
-	case err != nil:
+		if st := grpcx.StatusFromError(err); st != nil {
+			return st.Err()
+		}
 		slog.WarnContext(ctx, "failed to pipe",
 			slog.String("upstream_name", forward.Upstream.Name()),
 			slogx.Error(err))
 		return status.Errorf(codes.Internal, "{groxy} failed to pipe messages to the upstream")
-	default:
-		return nil
 	}
+
+	return nil
+}
+
+func eofStatus(upstream grpc.ClientStream) (err error) {
+	if err = upstream.RecvMsg(nil); err == nil {
+		return status.Error(codes.Internal, "{groxy} unexpected EOF from the upstream")
+	}
+	if st := grpcx.StatusFromError(err); st != nil {
+		return st.Err()
+	}
+	if !errors.Is(err, io.EOF) {
+		return status.Errorf(codes.Internal, "{groxy} failed to read the EOF from the upstream: %v", err)
+	}
+	return nil // if there is just EOF then probably everything is fine
 }
 
 func plantHeader(ctx context.Context, header metadata.MD) context.Context {
