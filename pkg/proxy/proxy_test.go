@@ -190,8 +190,6 @@ func TestServer_handle(t *testing.T) {
 		})
 
 		t.Run("client stream", func(t *testing.T) {
-			//cl := grpctest.NewExampleServiceClient(backendConn)
-
 			stream, err := cl.ClientStream(context.Background())
 			require.NoError(t, err)
 
