@@ -164,7 +164,7 @@ message SomeMessage {
 ```
 
 #### multiline strings
-protobuf itself doesn't support multiline strings, so gRoxy introduces it's own syntax for them in order to allow to specify complex values in `groxypb.value` option. Multiline strings should be enclosed in triple backticks:
+protobuf itself doesn't support multiline strings, so gRoxy introduces it's own syntax for them in order to allow to specify complex values in `groxypb.value` option. Multiline strings should be enclosed in backticks:
 ```protobuf
 message Dependency {
   string field1 = 1;
