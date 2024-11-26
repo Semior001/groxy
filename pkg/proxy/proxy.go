@@ -172,14 +172,11 @@ func (s *Server) forward(stream grpc.ServerStream, forward discovery.Upstream, r
 			if st := grpcx.StatusFromError(err); st != nil {
 				return st.Err()
 			}
-
 			if errors.Is(err, io.EOF) {
 				return nil // if there is just EOF then probably everything is fine
 			}
-
 			return status.Errorf(codes.Internal, "{groxy} failed to read the EOF from the upstream: %v", err)
 		}
-
 		return status.Error(codes.Internal, "{groxy} unexpected EOF from the upstream")
 	case err != nil:
 		slog.WarnContext(ctx, "failed to pipe",

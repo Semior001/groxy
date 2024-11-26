@@ -179,7 +179,7 @@ func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream,
 			return nil, fmt.Errorf("dial upstream %q: %w", name, err)
 		}
 
-		res = append(res, discovery.NamedClosableClientConn{
+		res = append(res, discovery.ClientConn{
 			ConnName:        name,
 			ServeReflection: u.ServeReflection,
 			ClientConn:      cc,

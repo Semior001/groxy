@@ -119,15 +119,15 @@ type Upstream interface {
 	grpc.ClientConnInterface
 }
 
-// NamedClosableClientConn is a named closable client connection.
-type NamedClosableClientConn struct {
+// ClientConn is a named closable client connection.
+type ClientConn struct {
 	ConnName        string
 	ServeReflection bool
 	*grpc.ClientConn
 }
 
 // Name returns the name of the connection.
-func (n NamedClosableClientConn) Name() string { return n.ConnName }
+func (n ClientConn) Name() string { return n.ConnName }
 
 // Reflection returns true if the connection serves reflection.
-func (n NamedClosableClientConn) Reflection() bool { return n.ServeReflection }
+func (n ClientConn) Reflection() bool { return n.ServeReflection }
