@@ -131,6 +131,11 @@ func setupLog(dbg, json bool) {
 		}
 	}
 
+	middlewares := []slogx.Middleware{
+		slogm.RequestID(),
+		slogm.TrimAttrs(1024), // 1Kb
+	}
+
 	timeFormat := time.DateTime
 	handlerOpts := &slog.HandlerOptions{Level: slog.LevelInfo}
 	if dbg {
@@ -159,6 +164,12 @@ func setupLog(dbg, json bool) {
 				return slog.String("s", s)
 			}
 		}
+
+		middlewares = []slogx.Middleware{
+			slogm.RequestID(),
+			slogm.StacktraceOnError(),
+			slogm.TrimAttrs(1024), // 1Kb
+		}
 	}
 
 	var handler slog.Handler
@@ -168,11 +179,7 @@ func setupLog(dbg, json bool) {
 		handler = tint.NewHandler(os.Stderr, tintOpts(handlerOpts, timeFormat))
 	}
 
-	handler = slogx.NewChain(handler,
-		slogm.RequestID(),
-		slogm.StacktraceOnError(),
-		slogm.TrimAttrs(1024), // 1Kb
-	)
+	handler = slogx.NewChain(handler, middlewares...)
 
 	slog.SetDefault(slog.New(handler))
 }

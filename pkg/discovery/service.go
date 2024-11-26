@@ -50,6 +50,10 @@ func (s *Service) Run(ctx context.Context) (err error) {
 			s.closeUpstreams(ctx)
 			s.upstreams = upstreams
 			s.mu.Unlock()
+
+			slog.InfoContext(ctx, "updated routing rules",
+				slog.Int("rules", len(rules)),
+				slog.Int("upstreams", len(upstreams)))
 		}
 	}
 }

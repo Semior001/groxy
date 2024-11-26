@@ -235,14 +235,20 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 				break
 			}
 		}
+		if result.Forward.Upstream == nil {
+			return discovery.Rule{}, fmt.Errorf("upstream %q not found", r.Forward.Upstream)
+		}
 	}
 
 	if result.Mock, err = parseRespond(r.Respond); err != nil {
 		return discovery.Rule{}, fmt.Errorf("parse respond: %w", err)
 	}
 
-	if result.Mock != nil && result.Forward != nil {
+	switch {
+	case result.Mock != nil && result.Forward != nil:
 		return discovery.Rule{}, fmt.Errorf("can't set both mock and forward in rule")
+	case result.Mock == nil && result.Forward == nil:
+		return discovery.Rule{}, fmt.Errorf("empty rule")
 	}
 
 	return result, nil
