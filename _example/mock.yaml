@@ -83,5 +83,8 @@ rules:
 
     # The next rule will forward the request to the specified upstream.
   - match: { uri: "com.github.Semior001.groxy.example.mock.Upstream/Get" }
-    forward: { upstream: example-1 }
+    forward:
+      upstream: example-1
+      header:
+        X-Request-Id: "123"
 

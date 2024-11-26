@@ -28,7 +28,8 @@ type Rule struct {
 
 // Forward specifies how the service should forward the request.
 type Forward struct {
-	Upstream string `yaml:"upstream"`
+	Upstream string            `yaml:"upstream"`
+	Header   map[string]string `yaml:"header"`
 }
 
 // Respond specifies how the service should respond to the request.

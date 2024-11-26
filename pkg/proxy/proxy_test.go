@@ -15,6 +15,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"context"
 	"github.com/Semior001/groxy/pkg/grpcx/grpctest"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestServer_handle(t *testing.T) {
@@ -22,7 +23,13 @@ func TestServer_handle(t *testing.T) {
 	grpctest.RegisterExampleServiceServer(backendSrv, &grpctest.Server{
 		BiDirectionalFunc: grpctest.PingPong,
 		ServerStreamFunc:  grpctest.Flood,
-		ClientStreamFunc:  grpctest.Sum,
+		ClientStreamFunc: func(srv grpctest.ExampleService_ClientStreamServer) error {
+			if err := srv.SetHeader(metadata.MD{"test": {"header"}}); err != nil {
+				return status.Errorf(codes.Internal, "failed to set header: %v", err)
+			}
+			srv.SetTrailer(metadata.Pairs("test", "trailer"))
+			return grpctest.Sum(srv)
+		},
 		UnaryFunc: func(_ context.Context, req *grpctest.StreamRequest) (*grpctest.StreamResponse, error) {
 			if req.Value == "forward" {
 				return &grpctest.StreamResponse{Value: "forwarded to the backend"}, nil
@@ -71,11 +78,11 @@ func TestServer_handle(t *testing.T) {
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
 						Message: &grpctest.StreamRequest{Value: "forward"},
 					},
-					Forward: discovery.ClientConn{
+					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
 						ServeReflection: true,
 						ClientConn:      backendConn,
-					},
+					}},
 				},
 				{
 					Name: "groxy.testdata.ExampleService/Unary (mock with response)",
@@ -92,33 +99,33 @@ func TestServer_handle(t *testing.T) {
 					Match: discovery.RequestMatcher{
 						URI: regexp.MustCompile("groxy.testdata.ExampleService/BiDirectional"),
 					},
-					Forward: discovery.ClientConn{
+					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
 						ServeReflection: true,
 						ClientConn:      backendConn,
-					},
+					}},
 				},
 				{
 					Name: "groxy.testdata.ExampleService/ClientStream (forward to backend)",
 					Match: discovery.RequestMatcher{
 						URI: regexp.MustCompile("groxy.testdata.ExampleService/ClientStream"),
 					},
-					Forward: discovery.ClientConn{
+					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
 						ServeReflection: true,
 						ClientConn:      backendConn,
-					},
+					}},
 				},
 				{
 					Name: "groxy.testdata.ExampleService/ServerStream (forward to backend)",
 					Match: discovery.RequestMatcher{
 						URI: regexp.MustCompile("groxy.testdata.ExampleService/ServerStream"),
 					},
-					Forward: discovery.ClientConn{
+					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
 						ServeReflection: true,
 						ClientConn:      backendConn,
-					},
+					}},
 				},
 			}
 		},
@@ -190,7 +197,9 @@ func TestServer_handle(t *testing.T) {
 		})
 
 		t.Run("client stream", func(t *testing.T) {
-			stream, err := cl.ClientStream(context.Background())
+			header, trailer := metadata.New(nil), metadata.New(nil)
+
+			stream, err := cl.ClientStream(context.Background(), grpc.Header(&header), grpc.Trailer(&trailer))
 			require.NoError(t, err)
 
 			for i := 0; i < 5; i++ {
@@ -199,6 +208,9 @@ func TestServer_handle(t *testing.T) {
 
 			resp, err := stream.CloseAndRecv()
 			require.NoError(t, err)
+
+			assert.Equal(t, metadata.MD{"content-type": []string{"application/grpc"}}, header)
+			assert.Equal(t, metadata.MD{"test": []string{"header", "trailer"}}, trailer)
 
 			require.Equal(t, "10", resp.Value)
 		})

@@ -34,13 +34,21 @@ type Message struct {
 
 // Pipe pipes the messages from the client stream to the server stream.
 // Note that it closes the server stream when the client stream returned io.EOF.
-func Pipe(server grpc.ClientStream, client grpc.ServerStream) error {
+func Pipe(server grpc.ClientStream, client grpc.ServerStream, opts ...PipeOption) error {
+	o := pipeOptions{}
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	ewg := &errgroup.Group{}
 	ewg.Go(func() error {
 		for {
 			var msg []byte
 			if err := server.RecvMsg(&msg); err != nil {
 				return fmt.Errorf("receive message from client stream: %w", err)
+			}
+			for _, f := range o.beforeClientSend {
+				f(server, client)
 			}
 			if err := client.SendMsg(msg); err != nil {
 				return fmt.Errorf("send message to server stream: %w", err)
@@ -70,6 +78,21 @@ func Pipe(server grpc.ClientStream, client grpc.ServerStream) error {
 	}
 
 	return nil
+}
+
+// PipeOption is a pipe option.
+type PipeOption func(*pipeOptions)
+
+type pipeOptions struct {
+	beforeClientSend []func(server grpc.ClientStream, client grpc.ServerStream)
+}
+
+// BeforeClientSend sets the function that is called before pipe sends the received from
+// the server message to the client.
+func BeforeClientSend(f func(server grpc.ClientStream, client grpc.ServerStream)) PipeOption {
+	return func(o *pipeOptions) {
+		o.beforeClientSend = append(o.beforeClientSend, f)
+	}
 }
 
 // StatusFromError extracts the gRPC status from the error.

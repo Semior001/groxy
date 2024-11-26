@@ -16,6 +16,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"github.com/Semior001/groxy/pkg/grpcx"
+	"context"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -142,12 +143,19 @@ func (s *Server) handle(_ any, stream grpc.ServerStream) error {
 	return s.mock(stream, match.Mock)
 }
 
-func (s *Server) forward(stream grpc.ServerStream, forward discovery.Upstream, recv []byte) error {
+func (s *Server) forward(stream grpc.ServerStream, forward *discovery.Forward, recv []byte) error {
 	ctx := stream.Context()
-	mtd, _ := grpc.Method(ctx)
+	ctx = plantHeader(ctx, forward.Header)
 
-	upstream, err := forward.NewStream(ctx, &grpc.StreamDesc{ClientStreams: true, ServerStreams: true}, mtd,
-		grpc.ForceCodec(grpcx.RawBytesCodec{}))
+	mtd, _ := grpc.Method(ctx)
+	desc := &grpc.StreamDesc{ClientStreams: true, ServerStreams: true}
+
+	upstreamHeader, upstreamTrailer := metadata.New(nil), metadata.New(nil)
+
+	upstream, err := forward.Upstream.NewStream(ctx, desc, mtd,
+		grpc.ForceCodec(grpcx.RawBytesCodec{}),
+		grpc.Header(&upstreamHeader),
+		grpc.Trailer(&upstreamTrailer))
 	if err != nil {
 		return status.Errorf(codes.Internal, "{groxy} failed to create upstream: %v", err)
 	}
@@ -160,9 +168,11 @@ func (s *Server) forward(stream grpc.ServerStream, forward discovery.Upstream, r
 	}
 
 	defer func() {
+		stream.SetTrailer(metadata.Join(upstreamHeader, upstreamTrailer))
+
 		if err = upstream.CloseSend(); err != nil {
 			slog.WarnContext(ctx, "failed to close the upstream",
-				slog.String("upstream_name", forward.Name()),
+				slog.String("upstream_name", forward.Upstream.Name()),
 				slogx.Error(err))
 		}
 	}()
@@ -181,12 +191,27 @@ func (s *Server) forward(stream grpc.ServerStream, forward discovery.Upstream, r
 		return status.Error(codes.Internal, "{groxy} unexpected EOF from the upstream")
 	case err != nil:
 		slog.WarnContext(ctx, "failed to pipe",
-			slog.String("upstream_name", forward.Name()),
+			slog.String("upstream_name", forward.Upstream.Name()),
 			slogx.Error(err))
 		return status.Errorf(codes.Internal, "{groxy} failed to pipe messages to the upstream")
 	default:
 		return nil
 	}
+}
+
+func plantHeader(ctx context.Context, header metadata.MD) context.Context {
+	outMD, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		outMD = metadata.New(nil)
+	}
+
+	for k, v := range header {
+		if _, ok = outMD[k]; !ok {
+			outMD[k] = v
+		}
+	}
+
+	return metadata.NewOutgoingContext(ctx, outMD)
 }
 
 func (s *Server) mock(stream grpc.ServerStream, reply *discovery.Mock) error {

@@ -228,9 +228,10 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 	}
 
 	if r.Forward != nil {
+		result.Forward = &discovery.Forward{Header: metadata.New(r.Forward.Header)}
 		for _, up := range upstreams {
 			if up.Name() == r.Forward.Upstream {
-				result.Forward = up
+				result.Forward.Upstream = up
 				break
 			}
 		}

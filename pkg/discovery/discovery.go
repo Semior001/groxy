@@ -61,7 +61,14 @@ type Rule struct {
 	Mock *Mock
 
 	// Forward specifies the upstream to forward the request.
-	Forward Upstream
+	Forward *Forward
+}
+
+// Forward specifies the upstream to forward the request and the parameters
+// to invoke the upstream.
+type Forward struct {
+	Upstream Upstream
+	Header   metadata.MD
 }
 
 // String returns the name of the rule.
