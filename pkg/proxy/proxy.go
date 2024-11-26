@@ -152,23 +152,24 @@ func (s *Server) forward(stream grpc.ServerStream, forward discovery.Upstream, r
 		return status.Errorf(codes.Internal, "{groxy} failed to create upstream: %v", err)
 	}
 
-	var msgs []grpcx.Message
 	if recv != nil {
-		msgs = []grpcx.Message{{Value: recv, Direction: grpcx.ClientToServer}}
+		if err = upstream.SendMsg(recv); err != nil {
+			return status.Errorf(codes.Internal, "{groxy} failed to send the first message to the upstream: %v",
+				err)
+		}
 	}
 
 	defer func() {
-		if err := upstream.CloseSend(); err != nil {
+		if err = upstream.CloseSend(); err != nil {
 			slog.WarnContext(ctx, "failed to close the upstream",
 				slog.String("upstream_name", forward.Name()),
 				slogx.Error(err))
 		}
 	}()
 
-	switch err = grpcx.Pipe(upstream, stream, msgs...); {
+	switch err = grpcx.Pipe(upstream, stream); {
 	case errors.Is(err, io.EOF):
-		// try to get the error from the upstream
-		if err := upstream.RecvMsg(nil); err != nil {
+		if err = upstream.RecvMsg(nil); err != nil {
 			if st := grpcx.StatusFromError(err); st != nil {
 				return st.Err()
 			}

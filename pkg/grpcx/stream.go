@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 	"errors"
 	"google.golang.org/grpc/codes"
+	"io"
 )
 
 // Direction describes the direction of the message.
@@ -31,23 +32,9 @@ type Message struct {
 	Descriptor string
 }
 
-// Pipe pipes the messages from the client stream to the server stream
-// Note that it doesn't close either of streams in case of any error, this
-// is always the consumer's responsibility.
-func Pipe(server grpc.ClientStream, client grpc.ServerStream, msgs ...Message) error {
-	for idx, msg := range msgs {
-		switch msg.Direction {
-		case ClientToServer:
-			if err := server.SendMsg(msg.Value); err != nil {
-				return fmt.Errorf("send %d first message to server stream: %w", idx, err)
-			}
-		case ServerToClient:
-			if err := client.SendMsg(msg.Value); err != nil {
-				return fmt.Errorf("send %d first message to client stream: %w", idx, err)
-			}
-		}
-	}
-
+// Pipe pipes the messages from the client stream to the server stream.
+// Note that it closes the server stream when the client stream returned io.EOF.
+func Pipe(server grpc.ClientStream, client grpc.ServerStream) error {
 	ewg := &errgroup.Group{}
 	ewg.Go(func() error {
 		for {
@@ -64,6 +51,12 @@ func Pipe(server grpc.ClientStream, client grpc.ServerStream, msgs ...Message) e
 		for {
 			var msg []byte
 			if err := client.RecvMsg(&msg); err != nil {
+				if errors.Is(err, io.EOF) {
+					if err = server.CloseSend(); err != nil {
+						return fmt.Errorf("close server stream: %w", err)
+					}
+					return nil
+				}
 				return fmt.Errorf("receive message from server stream: %w", err)
 			}
 			if err := server.SendMsg(msg); err != nil {
