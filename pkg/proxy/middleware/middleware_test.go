@@ -13,6 +13,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"github.com/Semior001/groxy/pkg/grpcx/grpctest"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestAppInfo(t *testing.T) {
@@ -38,7 +42,7 @@ func TestAppInfo(t *testing.T) {
 func TestRecoverer(t *testing.T) {
 	bts := bytes.NewBuffer(nil)
 	slog.SetDefault(slog.New(slog.NewTextHandler(bts, &slog.HandlerOptions{})))
-	mw := Recoverer()(func(_ any, _ grpc.ServerStream) error { panic("test") })
+	mw := Recoverer("{groxy} panic")(func(_ any, _ grpc.ServerStream) error { panic("test") })
 	var err error
 	require.NotPanics(t, func() {
 		err = mw(nil, &mocks.ServerStreamMock{
@@ -74,4 +78,61 @@ func TestChain(t *testing.T) {
 	h := Wrap(func(_ any, _ grpc.ServerStream) error { return nil }, mw1, mw2, mw3)
 	require.NoError(t, h(nil, nil))
 	assert.Equal(t, []string{"mw1", "mw2", "mw3"}, calls)
+}
+
+func TestHealth(t *testing.T) {
+	prepare := func() (*health.Server, healthpb.HealthClient) {
+		h := health.NewServer()
+		h.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+
+		srv := grpc.NewServer(grpc.UnknownServiceHandler(Health(h)(func(_ any, _ grpc.ServerStream) error {
+			return status.Error(codes.Internal, "must not be called")
+		})))
+
+		addr := grpctest.StartServer(t, srv)
+
+		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		require.NoError(t, err)
+
+		cl := healthpb.NewHealthClient(conn)
+
+		return h, cl
+	}
+
+	t.Run("unary", func(t *testing.T) {
+		h, cl := prepare()
+
+		resp, err := cl.Check(context.Background(), &healthpb.HealthCheckRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, healthpb.HealthCheckResponse_SERVING, resp.Status)
+
+		h.SetServingStatus("", healthpb.HealthCheckResponse_NOT_SERVING)
+
+		resp, err = cl.Check(context.Background(), &healthpb.HealthCheckRequest{})
+		require.NoError(t, err)
+
+		assert.Equal(t, healthpb.HealthCheckResponse_NOT_SERVING, resp.Status)
+	})
+
+	t.Run("watch", func(t *testing.T) {
+		h, cl := prepare()
+
+		stream, err := cl.Watch(context.Background(), &healthpb.HealthCheckRequest{})
+		require.NoError(t, err)
+		defer stream.CloseSend()
+
+		resp, err := stream.Recv()
+		require.NoError(t, err)
+
+		assert.Equal(t, healthpb.HealthCheckResponse_SERVING, resp.Status)
+
+		h.SetServingStatus("", healthpb.HealthCheckResponse_NOT_SERVING)
+
+		resp, err = stream.Recv()
+		require.NoError(t, err)
+
+		assert.Equal(t, healthpb.HealthCheckResponse_NOT_SERVING, resp.Status)
+	})
+
 }

@@ -17,6 +17,8 @@ import (
 	"google.golang.org/grpc/status"
 	"github.com/Semior001/groxy/pkg/grpcx"
 	"context"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -69,12 +71,16 @@ func (s *Server) Listen(addr string) (err error) {
 	slog.Info("starting gRPC server", slog.Any("addr", addr))
 	defer slog.Warn("gRPC server stopped", slogx.Error(err))
 
+	healthHandler := health.NewServer()
+	healthHandler.SetServingStatus("", healthpb.HealthCheckResponse_SERVING)
+
 	s.grpc = grpc.NewServer(append(s.serverOpts,
 		grpc.UnknownServiceHandler(middleware.Wrap(s.handle,
-			middleware.Recoverer(),
+			middleware.Recoverer("{groxy} panic"),
 			middleware.Maybe(s.signature, middleware.AppInfo("groxy", "Semior001", s.version)),
 			middleware.Log(s.debug, "/grpc.reflection."),
 			middleware.PassMetadata(),
+			middleware.Health(healthHandler),
 			middleware.Maybe(s.reflection, middleware.Chain(
 				middleware.Reflector{
 					Logger:        slog.Default().With(slog.String("subsystem", "reflection")),

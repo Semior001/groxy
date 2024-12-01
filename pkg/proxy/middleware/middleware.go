@@ -11,6 +11,8 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"github.com/Semior001/groxy/pkg/grpcx"
+	"google.golang.org/grpc/health"
+	healthpb "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 // Middleware is a function that intercepts the execution of a gRPC handler.
@@ -64,8 +66,41 @@ func PassMetadata() Middleware {
 	}
 }
 
+// Health serves the health check requests.
+func Health(h *health.Server) Middleware {
+	return func(next grpc.StreamHandler) grpc.StreamHandler {
+		return func(srv any, stream grpc.ServerStream) error {
+			ctx := stream.Context()
+			mtd, ok := grpc.Method(ctx)
+			if !ok {
+				return next(srv, stream)
+			}
+
+			switch mtd {
+			case "/grpc.health.v1.Health/Check":
+				req := &healthpb.HealthCheckRequest{}
+				if err := stream.RecvMsg(req); err != nil {
+					return status.Error(codes.InvalidArgument, err.Error())
+				}
+
+				resp, err := h.Check(ctx, req)
+				if err != nil {
+					return err
+				}
+
+				return stream.SendMsg(resp)
+			case "/grpc.health.v1.Health/Watch":
+				// a dumb kludge to not write own WatchServer
+				return healthpb.Health_ServiceDesc.Streams[0].Handler(h, stream)
+			default:
+				return next(srv, stream)
+			}
+		}
+	}
+}
+
 // Recoverer is a middleware that recovers from panics, logs the panic and returns a gRPC error if possible.
-func Recoverer() Middleware {
+func Recoverer(responseMessage string) Middleware {
 	return func(next grpc.StreamHandler) grpc.StreamHandler {
 		return func(srv any, stream grpc.ServerStream) (err error) {
 			defer func() {
@@ -88,7 +123,7 @@ func Recoverer() Middleware {
 						slog.Any("panic", rvr),
 						slogx.Error(err))
 
-					err = status.Error(codes.ResourceExhausted, "{groxy} panic")
+					err = status.Error(codes.ResourceExhausted, responseMessage)
 				}
 			}()
 			return next(srv, stream)
