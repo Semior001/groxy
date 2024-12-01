@@ -10,6 +10,7 @@ import (
 	"errors"
 	"google.golang.org/grpc/codes"
 	"io"
+	"context"
 )
 
 // Direction describes the direction of the message.
@@ -101,3 +102,15 @@ func ClientCode(code codes.Code) bool {
 		return false
 	}
 }
+
+// StreamWithContext wraps the provided stream, replacing its context with the provided one.
+func StreamWithContext(ctx context.Context, stream grpc.ServerStream) grpc.ServerStream {
+	return contextedStream{ctx: ctx, ServerStream: stream}
+}
+
+type contextedStream struct {
+	ctx context.Context
+	grpc.ServerStream
+}
+
+func (s contextedStream) Context() context.Context { return s.ctx }

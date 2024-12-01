@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"context"
+	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 // Middleware is a function that intercepts the execution of a gRPC handler.
@@ -58,10 +58,8 @@ func PassMetadata() Middleware {
 			inMD, _ := metadata.FromIncomingContext(ctx)
 			outMD, _ := metadata.FromOutgoingContext(ctx)
 			outMD = metadata.Join(outMD, inMD)
-			return next(srv, &contextedStream{
-				ctx:          metadata.NewOutgoingContext(ctx, outMD),
-				ServerStream: stream,
-			})
+			ctx = metadata.NewOutgoingContext(ctx, outMD)
+			return next(srv, grpcx.StreamWithContext(ctx, stream))
 		}
 	}
 }
@@ -105,10 +103,3 @@ func Maybe(apply bool, mw Middleware) Middleware {
 	}
 	return mw
 }
-
-type contextedStream struct {
-	ctx context.Context
-	grpc.ServerStream
-}
-
-func (s contextedStream) Context() context.Context { return s.ctx }
