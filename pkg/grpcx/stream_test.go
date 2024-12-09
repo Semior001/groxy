@@ -43,7 +43,7 @@ func TestPipe(t *testing.T) {
 		backend := grpctest.StartServer(t, s)
 		t.Cleanup(s.GracefulStop)
 
-		backendConn, err := grpc.Dial(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		backendConn, err := grpc.NewClient(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
 		frontendS := grpc.NewServer(
@@ -84,7 +84,7 @@ func TestPipe(t *testing.T) {
 		frontend := grpctest.StartServer(t, frontendS)
 		t.Cleanup(frontendS.GracefulStop)
 
-		frontendConn, err := grpc.Dial(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		frontendConn, err := grpc.NewClient(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
 		client := grpctest.NewExampleServiceClient(frontendConn)
@@ -124,7 +124,7 @@ func TestPipe(t *testing.T) {
 		backend := grpctest.StartServer(t, s)
 		t.Cleanup(s.GracefulStop)
 
-		backendConn, err := grpc.Dial(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		backendConn, err := grpc.NewClient(backend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
 		frontendS := grpc.NewServer(
@@ -161,7 +161,7 @@ func TestPipe(t *testing.T) {
 		frontend := grpctest.StartServer(t, frontendS)
 		t.Cleanup(frontendS.GracefulStop)
 
-		frontendConn, err := grpc.Dial(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		frontendConn, err := grpc.NewClient(frontend, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
 		client := grpctest.NewExampleServiceClient(frontendConn)

@@ -37,7 +37,7 @@ func TestServer_handle(t *testing.T) {
 			return nil, status.Error(codes.Unimplemented, "unexpected call")
 		},
 	})
-	backendConn, err := grpc.Dial(grpctest.StartServer(t, backendSrv),
+	backendConn, err := grpc.NewClient(grpctest.StartServer(t, backendSrv),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 
@@ -138,7 +138,7 @@ func TestServer_handle(t *testing.T) {
 	}()
 	defer srv.Close()
 
-	cc, err := grpc.Dial(fmt.Sprintf("localhost:%d", port),
+	cc, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))
 	require.NoError(t, err)
 

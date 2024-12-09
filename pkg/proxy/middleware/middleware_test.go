@@ -91,7 +91,7 @@ func TestHealth(t *testing.T) {
 
 		addr := grpctest.StartServer(t, srv)
 
-		conn, err := grpc.Dial(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		require.NoError(t, err)
 
 		cl := healthpb.NewHealthClient(conn)

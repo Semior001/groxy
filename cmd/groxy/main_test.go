@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	"github.com/Semior001/grpc-echo/echopb"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMain_ReverseProxy(t *testing.T) {
@@ -36,6 +37,28 @@ rules: [{ match: { uri: "(.*)" }, forward: { upstream: "benchmark" } }]`, echoAd
 	t.Logf("%+v", resp)
 }
 
+func TestMain_Stub(t *testing.T) {
+	_, conn := setup(t, `
+version: 1
+rules:
+  - match: { uri: "/grpc_echo.v1.EchoService/Echo" }
+    respond:
+      body: |
+        message Response {
+          option (groxypb.target) = true;
+          string body = 2 [(groxypb.value) = "mocked response"];
+        }
+`)
+	waitForServerUp(t, conn)
+
+	client := echopb.NewEchoServiceClient(conn)
+
+	resp, err := client.Echo(context.Background(), &echopb.EchoRequest{Ping: "hello"})
+	require.NoError(t, err)
+	assert.Equal(t, resp.Body, "mocked response")
+}
+
+//nolint:unparam // port is ok to be unused, will be needed in further tests
 func setup(tb testing.TB, config string, flags ...string) (port int, conn *grpc.ClientConn) {
 	tb.Helper()
 

@@ -171,7 +171,7 @@ func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream,
 			slog.String("address", u.Addr),
 			slog.Bool("tls", u.TLS))
 
-		cc, err := grpc.DialContext(ctx, u.Addr,
+		cc, err := grpc.NewClient(u.Addr,
 			grpc.WithTransportCredentials(cred),
 			grpc.WithStreamInterceptor(grpcx.ClientLogInterceptor(slog.Default())),
 		)
