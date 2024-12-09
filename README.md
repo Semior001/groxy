@@ -20,6 +20,7 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
     - [enums](#enums)
     - [repeated fields](#repeated-fields)
     - [maps](#maps)
+- [benchmark](#benchmark)
 - [project status](#status)
 
 ## todos
@@ -241,6 +242,92 @@ message StubResponse {
     option (groxypb.target) = true;
     map<string, string> map_field = 1 [(groxypb.value) = '{"key1": "value1", "key2": "value2"}'];
 }
+```
+
+## benchmark
+
+all benchmarks were performed on a MacBook Pro 2021 with M1 Pro chip with 16GB of RAM.
+
+### mocker
+
+single rule on mock
+
+```shell
+$ ghz --insecure --call 'grpc_echo/v1/EchoService/Echo' -d '{"ping": "Hello, world!"}' -c 1 --total 10000 localhost:8080
+
+Summary:
+  Count:	10000
+  Total:	3.42 s
+  Slowest:	8.03 ms
+  Fastest:	0.12 ms
+  Average:	0.24 ms
+  Requests/sec:	2923.93
+
+Response time histogram:
+  0.119 [1]    |
+  0.909 [9965] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  1.700 [30]   |
+  2.491 [0]    |
+  3.282 [2]    |
+  4.072 [1]    |
+  4.863 [0]    |
+  5.654 [0]    |
+  6.444 [0]    |
+  7.235 [0]    |
+  8.026 [1]    |
+
+Latency distribution:
+  10 % in 0.17 ms 
+  25 % in 0.18 ms 
+  50 % in 0.21 ms 
+  75 % in 0.26 ms 
+  90 % in 0.35 ms 
+  95 % in 0.42 ms 
+  99 % in 0.66 ms 
+
+Status code distribution:
+  [OK]   10000 responses   
+```
+
+### reverse-proxy
+
+performed with the use of [grpc-echo](https://github.com/Semior001/grpc-echo), single rule on upstream
+
+```shell
+$ ghz --insecure --call 'grpc_echo/v1/EchoService/Echo' -d '{"ping": "Hello, world!"}' -c 1 --total 10000 localhost:8080
+
+Summary:
+  Count:	10000
+  Total:	10.16 s
+  Slowest:	43.56 ms
+  Fastest:	0.46 ms
+  Average:	0.90 ms
+  Requests/sec:	984.55
+
+Response time histogram:
+  0.456  [1]    |
+  4.767  [9980] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  9.078  [16]   |
+  13.389 [0]    |
+  17.700 [0]    |
+  22.010 [1]    |
+  26.321 [1]    |
+  30.632 [0]    |
+  34.943 [0]    |
+  39.254 [0]    |
+  43.564 [1]    |
+
+Latency distribution:
+  10 % in 0.61 ms 
+  25 % in 0.67 ms 
+  50 % in 0.78 ms 
+  75 % in 0.97 ms 
+  90 % in 1.25 ms 
+  95 % in 1.53 ms 
+  99 % in 2.57 ms 
+
+Status code distribution:
+  [OK]   10000 responses   
 ```
 
 ## status
