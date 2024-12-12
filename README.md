@@ -15,12 +15,16 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
 - [usage](#usage)
   - [example](#example)
   - [configuration](#configuration)
+  - [gRPC reflection](#grpc-reflection)
   - [groxypb](#groxypb)
+    - [multiline-strings](#multiline-strings)
     - [nested messages](#nested-messages)
     - [enums](#enums)
     - [repeated fields](#repeated-fields)
     - [maps](#maps)
 - [benchmark](#benchmark)
+  - [mocker](#mocker)
+  - [reverse-proxy](#reverse-proxy) 
 - [project status](#status)
 
 ## todos
