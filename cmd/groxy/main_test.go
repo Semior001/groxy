@@ -58,6 +58,80 @@ rules:
 	assert.Equal(t, resp.Body, "mocked response")
 }
 
+func TestMain_StdinConfig(t *testing.T) {
+	// Save original stdin and restore after test
+	oldStdin := os.Stdin
+	defer func() { os.Stdin = oldStdin }()
+
+	// Create a pipe to use as stdin
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+	os.Stdin = r
+
+	// Write the config to the pipe
+	config := `
+version: 1
+rules:
+  - match: { uri: "/grpc_echo.v1.EchoService/Echo" }
+    respond:
+      body: |
+        message Response {
+          option (groxypb.target) = true;
+          string body = 2 [(groxypb.value) = "stdin config worked"];
+        }
+`
+	_, err = w.Write([]byte(config))
+	require.NoError(t, err)
+	w.Close()
+
+	port := 40000 + int(rand.Int31n(10000))
+	os.Args = []string{"test", "--stdin", "--addr=:" + fmt.Sprint(port)}
+
+	// Start the server
+	done := make(chan struct{})
+	go func() {
+		<-done
+		e := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
+		require.NoError(t, e)
+	}()
+
+	started, finished := make(chan struct{}), make(chan struct{})
+	go func() {
+		t.Logf("running server on port %d with stdin config", port)
+		close(started)
+		main()
+		close(finished)
+	}()
+
+	t.Cleanup(func() {
+		close(done)
+		<-finished
+	})
+
+	<-started
+	time.Sleep(time.Millisecond * 50) // do not start right away
+	
+	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithUserAgent("groxy-test-ua"))
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		if err := conn.Close(); err != nil &&
+			!strings.Contains(err.Error(), "grpc: the client connection is closing") {
+			t.Errorf("failed to close connection: %v", err)
+		}
+	})
+
+	waitForServerUp(t, conn)
+
+	// Test the server
+	client := echopb.NewEchoServiceClient(conn)
+	resp, err := client.Echo(context.Background(), &echopb.EchoRequest{Ping: "hello"})
+	require.NoError(t, err)
+	assert.Equal(t, "stdin config worked", resp.Body)
+}
+
 //nolint:unparam // port is ok to be unused, will be needed in further tests
 func setup(tb testing.TB, config string, flags ...string) (port int, conn *grpc.ClientConn) {
 	tb.Helper()

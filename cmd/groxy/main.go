@@ -31,6 +31,7 @@ var opts struct {
 		CheckInterval time.Duration `long:"check-interval" env:"CHECK_INTERVAL" default:"3s"        description:"Check interval for the config file"`
 		Delay         time.Duration `long:"delay"          env:"DELAY"          default:"500ms"     description:"Delay before applying the changes" `
 	} `group:"file" namespace:"file" env-namespace:"FILE"`
+	UseStdin   bool `long:"stdin"          env:"STDIN"            description:"Read configuration from stdin instead of file"`
 	Signature  bool `long:"signature"     env:"SIGNATURE"        description:"Enable gRoxy signature headers"`
 	Reflection bool `long:"reflection"    env:"REFLECTION"       description:"Enable gRPC reflection merger"`
 	JSON       bool `long:"json"          env:"JSON"             description:"Enable JSON logging"`
@@ -70,13 +71,22 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	dsvc := &discovery.Service{Providers: []discovery.Provider{
-		&fileprovider.File{
+	var providers []discovery.Provider
+	
+	switch {
+	case opts.UseStdin:
+		slog.Info("reading configuration from stdin")
+		providers = append(providers, &fileprovider.Stdin{})
+	default:
+		slog.Info("reading configuration from file", slog.String("file", opts.File.Name))
+		providers = append(providers, &fileprovider.File{
 			FileName:      opts.File.Name,
 			CheckInterval: opts.File.CheckInterval,
 			Delay:         opts.File.Delay,
-		},
-	}}
+		})
+	}
+	
+	dsvc := &discovery.Service{Providers: providers}
 
 	proxyOpts := []proxy.Option{proxy.Version(getVersion())}
 	if opts.Debug {
