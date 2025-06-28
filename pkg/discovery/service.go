@@ -31,8 +31,9 @@ type Service struct {
 // on the signals, received from providers.
 func (s *Service) Run(ctx context.Context) (err error) {
 	slog.InfoContext(ctx, "starting discovery service")
-	defer slog.WarnContext(ctx, "discovery service stopped", slogx.Error(err))
-	defer s.closeUpstreams(ctx)
+	// close upstreams on exit with detached context
+	defer s.closeUpstreams(context.WithoutCancel(ctx))
+	defer func() { slog.WarnContext(ctx, "discovery service stopped", slogx.Error(err)) }()
 
 	chs := make([]<-chan string, 0, len(s.Providers))
 	for _, p := range s.Providers {
