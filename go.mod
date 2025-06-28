@@ -1,6 +1,6 @@
 module github.com/Semior001/groxy
 
-go 1.23.4
+go 1.24.0
 
 require (
 	github.com/Semior001/grpc-echo/echopb v0.1.0
