@@ -1,69 +1,59 @@
-run:
-  timeout: 5m
-
-linters-settings:
-  govet:
-    enable:
-      - shadow
-  goconst:
-    min-len: 2
-    min-occurrences: 2
-  misspell:
-    locale: US
-  lll:
-    line-length: 140
-  gocritic:
-    enabled-tags:
-      - performance
-      - style
-      - experimental
-    disabled-checks:
-      - wrapperFunc
-      - hugeParam
-      - rangeValCopy
-      - singleCaseSwitch
-      - ifElseChain
-
+version: "2"
 linters:
-  disable-all: true
-  fast: false
+  default: none
   enable:
-    - unconvert
-    - gosimple
-    - staticcheck
-    - unused
-    - gosec
-    - gocyclo
     - dupl
-    - misspell
-    - unparam
-    - typecheck
-    - ineffassign
-    - revive
-    - staticcheck
-    - govet
-    - stylecheck
     - gochecknoinits
     - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
     - nakedret
     - prealloc
-issues:
-  exclude-dirs:
-    - vendor
-  exclude-use-default: false
-  exclude-rules:
-      # tests can be insecure and can duplicate code
-      - path: _test\.go
-        linters:
-          - gosec
-          - dupl
-      # duplicated struct tag can be found in CLI flags, for instance, it's OK
-      - text: "SA5008: duplicate struct tag"
-        linters:
-          - staticcheck
-
-      # we can shadow errors
-      - text: "shadow: declaration of \"err\" shadows declaration"
-        linters:
-          - govet
-
+    - revive
+    - staticcheck
+    - unconvert
+    - unused
+    - gocyclo
+    - nestif
+    - testifylint
+  settings:
+    goconst:
+      min-len: 2
+      min-occurrences: 2
+    gocritic:
+      disabled-checks:
+        - wrapperFunc
+        - hugeParam
+        - rangeValCopy
+        - singleCaseSwitch
+        - ifElseChain
+      enabled-tags:
+        - performance
+        - style
+        - experimental
+    lll: { line-length: 140 }
+    misspell: { locale: US }
+  exclusions:
+    generated: lax
+    rules:
+      - linters: [revive]
+        text: 'package-comments: should have a package comment'
+      - linters: [dupl, gosec]
+        path: _test\.go
+      - linters: [revive, unused]
+        path: _test\.go$
+        text: unused-parameter
+    paths:
+      - vendor
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

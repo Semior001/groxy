@@ -72,7 +72,7 @@ func (d *File) Events(ctx context.Context) <-chan string {
 				}
 
 				// don't react on modification right away
-				if modif == lastModif || modif.Sub(lastModif) < d.Delay {
+				if modif.Equal(lastModif) || modif.Sub(lastModif) < d.Delay {
 					continue
 				}
 

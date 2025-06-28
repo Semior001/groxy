@@ -241,8 +241,8 @@ func TestBuildMessage(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := BuildMessage(tt.def)
-			switch {
-			case tt.wantErr == nil:
+			switch tt.wantErr {
+			case nil:
 				require.NoError(t, err)
 				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, got))
 			default:

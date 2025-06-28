@@ -31,7 +31,7 @@ func TestFile_Events(t *testing.T) {
 		Delay:         200 * time.Millisecond,
 	}
 
-	go func() {
+	go func() { //nolint:testifylint // we can't use require.NoError here
 		time.Sleep(300 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
 		time.Sleep(300 * time.Millisecond)
@@ -65,7 +65,7 @@ func TestFile_Rules(t *testing.T) {
 	_ = tmp.Close()
 	defer os.Remove(tmp.Name())
 
-	assert.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
+	require.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
 
 	f := File{
 		FileName:      tmp.Name(),
@@ -151,7 +151,7 @@ func TestFile_Upstreams(t *testing.T) {
 	_ = tmp.Close()
 	defer os.Remove(tmp.Name())
 
-	assert.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
+	require.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
 
 	f := File{
 		FileName:      tmp.Name(),

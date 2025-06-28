@@ -55,7 +55,7 @@ rules:
 
 	resp, err := client.Echo(context.Background(), &echopb.EchoRequest{Ping: "hello"})
 	require.NoError(t, err)
-	assert.Equal(t, resp.Body, "mocked response")
+	assert.Equal(t, "mocked response", resp.Body)
 }
 
 func TestMain_StdinConfig(t *testing.T) {
@@ -80,7 +80,7 @@ rules:
           string body = 2 [(groxypb.value) = "stdin config worked"];
         }
 `
-	_, err = w.Write([]byte(config))
+	_, err = w.WriteString(config)
 	require.NoError(t, err)
 	w.Close()
 
@@ -92,7 +92,7 @@ rules:
 	go func() {
 		<-done
 		e := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-		require.NoError(t, e)
+		assert.NoError(t, e)
 	}()
 
 	started, finished := make(chan struct{}), make(chan struct{})
@@ -110,7 +110,7 @@ rules:
 
 	<-started
 	time.Sleep(time.Millisecond * 50) // do not start right away
-	
+
 	conn, err := grpc.NewClient(fmt.Sprintf("localhost:%d", port),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithUserAgent("groxy-test-ua"))
@@ -153,7 +153,7 @@ func setup(tb testing.TB, config string, flags ...string) (port int, conn *grpc.
 	go func() {
 		<-done
 		e := syscall.Kill(syscall.Getpid(), syscall.SIGTERM)
-		require.NoError(tb, e)
+		assert.NoError(tb, e)
 	}()
 
 	started, finished := make(chan struct{}), make(chan struct{})
