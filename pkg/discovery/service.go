@@ -11,13 +11,16 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/proto"
 	"bytes"
+	"fmt"
+	"errors"
 )
 
 //go:generate moq -out mock_provider.go -fmt goimports . Provider
 
 // Service provides routing rules for the Service.
 type Service struct {
-	Providers []Provider
+	Providers   []Provider
+	StopOnError bool
 
 	upstreams []Upstream
 	rules     []*Rule
@@ -29,6 +32,7 @@ type Service struct {
 func (s *Service) Run(ctx context.Context) (err error) {
 	slog.InfoContext(ctx, "starting discovery service")
 	defer slog.WarnContext(ctx, "discovery service stopped", slogx.Error(err))
+	defer s.closeUpstreams(ctx)
 
 	chs := make([]<-chan string, 0, len(s.Providers))
 	for _, p := range s.Providers {
@@ -44,7 +48,13 @@ func (s *Service) Run(ctx context.Context) (err error) {
 		case ev := <-ch:
 			slog.DebugContext(ctx, "new event update received", slog.String("event", ev))
 
-			rules, upstreams := s.mergeStates(ctx)
+			rules, upstreams, err := s.mergeStates(ctx)
+			if err != nil {
+				if s.StopOnError {
+					return fmt.Errorf("merge states: %w", err)
+				}
+				slog.WarnContext(ctx, "failed to merge states", slogx.Error(err))
+			}
 			s.mu.Lock()
 			s.rules = rules
 			s.closeUpstreams(ctx)
@@ -58,15 +68,15 @@ func (s *Service) Run(ctx context.Context) (err error) {
 	}
 }
 
-func (s *Service) mergeStates(ctx context.Context) ([]*Rule, []Upstream) {
+func (s *Service) mergeStates(ctx context.Context) ([]*Rule, []Upstream, error) {
 	var rules []*Rule
 	var upstreams []Upstream
+	var errs error
+
 	for _, p := range s.Providers {
 		st, err := p.State(ctx)
 		if err != nil {
-			slog.ErrorContext(ctx, "failed to get state of the provider",
-				slog.String("provider", p.Name()),
-				slogx.Error(err))
+			errs = errors.Join(errs, fmt.Errorf("provider %s: %w", p.Name(), err))
 			continue
 		}
 		rules = append(rules, st.Rules...)
@@ -85,7 +95,7 @@ func (s *Service) mergeStates(ctx context.Context) ([]*Rule, []Upstream) {
 		return ri.Message != nil && rj.Message == nil
 	})
 
-	return rules, upstreams
+	return rules, upstreams, errs
 }
 
 // MatchMetadata matches the given gRPC request to an upstream connection.

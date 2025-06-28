@@ -18,14 +18,14 @@ func TestStdin_Events(t *testing.T) {
 
 	events := stdin.Events(ctx)
 
-	// Should receive one event immediately
+	// should receive one event immediately
 	event := <-events
 	assert.Equal(t, "stdin", event)
 
-	// Cancel context to close channel
+	// cancel context to close channel
 	cancel()
 
-	// Channel should be closed
+	// channel should be closed
 	_, ok := <-events
 	assert.False(t, ok, "events channel should be closed")
 }
@@ -84,16 +84,16 @@ rules: []
 			}
 
 			state, err := stdin.State(context.Background())
-			
+
 			if tt.wantErr != nil {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.wantErr.Error())
 				return
 			}
-			
+
 			require.NoError(t, err)
 			require.Equal(t, tt.want.Name, state.Name)
-			
+
 			if tt.want.Rules != nil {
 				require.Len(t, state.Rules, len(tt.want.Rules))
 				for i, r := range tt.want.Rules {

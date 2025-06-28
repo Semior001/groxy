@@ -71,22 +71,21 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	var providers []discovery.Provider
-	
+	dsvc := &discovery.Service{}
+
 	switch {
 	case opts.UseStdin:
 		slog.Info("reading configuration from stdin")
-		providers = append(providers, &fileprovider.Stdin{})
+		dsvc.Providers = append(dsvc.Providers, &fileprovider.Stdin{})
+		dsvc.StopOnError = true // stdin provider doesn't support reloading, so we need to shutdown on error
 	default:
 		slog.Info("reading configuration from file", slog.String("file", opts.File.Name))
-		providers = append(providers, &fileprovider.File{
+		dsvc.Providers = append(dsvc.Providers, &fileprovider.File{
 			FileName:      opts.File.Name,
 			CheckInterval: opts.File.CheckInterval,
 			Delay:         opts.File.Delay,
 		})
 	}
-	
-	dsvc := &discovery.Service{Providers: providers}
 
 	proxyOpts := []proxy.Option{proxy.Version(getVersion())}
 	if opts.Debug {
