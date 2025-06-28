@@ -37,7 +37,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: 2.1.6
+          version: v2.1.6
 
       - name: set up QEMU
         uses: docker/setup-qemu-action@v1
