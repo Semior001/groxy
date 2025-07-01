@@ -4,24 +4,26 @@ package fileprovider
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
+	"crypto/tls"
 	"github.com/Semior001/groxy/pkg/discovery"
+	"github.com/Semior001/groxy/pkg/grpcx"
 	"github.com/Semior001/groxy/pkg/protodef"
 	"github.com/cappuccinotm/slogx"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v3"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/credentials"
-	"crypto/tls"
 	"sort"
-	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -162,16 +164,28 @@ func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream,
 			cred = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
 		}
 
-		if u.Addr == "" {
+		tmpl, err := template.New("").
+			Funcs(template.FuncMap{"env": os.Getenv}).
+			Parse(u.Addr)
+		if err != nil {
+			return nil, fmt.Errorf("parse address template for upstream %q: %w", name, err)
+		}
+
+		addr := &strings.Builder{}
+		if err = tmpl.Execute(addr, nil); err != nil {
+			return nil, fmt.Errorf("execute address template for upstream %q: %w", name, err)
+		}
+
+		if addr.String() == "" {
 			return nil, fmt.Errorf("empty address in upstream %q", name)
 		}
 
 		slog.DebugContext(ctx, "dialing upstream",
 			slog.String("upstream", name),
-			slog.String("address", u.Addr),
+			slog.String("address", addr.String()),
 			slog.Bool("tls", u.TLS))
 
-		cc, err := grpc.NewClient(u.Addr,
+		cc, err := grpc.NewClient(addr.String(),
 			grpc.WithTransportCredentials(cred),
 			grpc.WithStreamInterceptor(grpcx.ClientLogInterceptor(slog.Default())),
 		)
