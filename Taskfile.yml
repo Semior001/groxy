@@ -20,8 +20,12 @@ tasks:
 
   lint:
     desc: "lint"
-    cmds:
-      - go tool golangci-lint run --timeout 5m --issues-exit-code 1 --config .golangci.yml ./...
+    cmd: |
+      go tool -modfile=tools/golangci-lint/go.mod \
+        golangci-lint run \
+          --timeout 5m \
+          --issues-exit-code 1 \
+          --config .golangci.yml ./...
 
   test:
     desc: "run tests"

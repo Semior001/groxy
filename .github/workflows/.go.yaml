@@ -22,6 +22,7 @@ jobs:
         run: |
           go test -v -timeout=100s -covermode=count -coverprofile=$GITHUB_WORKSPACE/profile.cov_tmp ./...
           cat $GITHUB_WORKSPACE/profile.cov_tmp | grep -v "mock_" > $GITHUB_WORKSPACE/profile.cov
+        working-directory: .
         env:
           TZ: "Asia/Almaty"
           CGO_ENABLED: 0
@@ -34,8 +35,9 @@ jobs:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: golangci-lint
-        run: |
-          go tool golangci-lint run --timeout 5m --issues-exit-code 1 --config .golangci.yml ./...
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
 
       - name: set up QEMU
         uses: docker/setup-qemu-action@v1
