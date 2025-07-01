@@ -29,8 +29,8 @@ type ServerStream grpc.ServerStream
 // Matcher matches the request URI and incoming metadata to the
 // registered rules.
 type Matcher interface {
-	MatchMetadata(string, metadata.MD) discovery.Matches
-	Upstreams() []discovery.Upstream
+	MatchMetadata(string, metadata.MD) discovery.Matches // returns matches based on the method and metadata.
+	Upstreams() []discovery.Upstream                     // returns all upstreams registered in the matcher
 }
 
 // Server is a gRPC server.

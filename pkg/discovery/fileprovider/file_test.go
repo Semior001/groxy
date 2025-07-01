@@ -17,7 +17,7 @@ import (
 )
 
 func TestFile_Events(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Millisecond)
 	defer cancel()
 
 	tmp, err := os.CreateTemp(os.TempDir(), "groxy-test-events")
@@ -28,15 +28,15 @@ func TestFile_Events(t *testing.T) {
 	f := File{
 		FileName:      tmp.Name(),
 		CheckInterval: 100 * time.Millisecond,
-		Delay:         200 * time.Millisecond,
+		Delay:         500 * time.Millisecond,
 	}
 
-	go func() {
-		time.Sleep(300 * time.Millisecond)
+	go func() { //nolint:testifylint // we can't use require.NoError here
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
 
 		// all those event will be ignored, submitted too fast
@@ -65,7 +65,7 @@ func TestFile_Rules(t *testing.T) {
 	_ = tmp.Close()
 	defer os.Remove(tmp.Name())
 
-	assert.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
+	require.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
 
 	f := File{
 		FileName:      tmp.Name(),
@@ -151,7 +151,7 @@ func TestFile_Upstreams(t *testing.T) {
 	_ = tmp.Close()
 	defer os.Remove(tmp.Name())
 
-	assert.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
+	require.NoError(t, os.WriteFile(tmp.Name(), []byte(f), 0o600))
 
 	f := File{
 		FileName:      tmp.Name(),

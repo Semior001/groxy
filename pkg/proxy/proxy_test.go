@@ -134,7 +134,7 @@ func TestServer_handle(t *testing.T) {
 	port := rand.Intn(1000) + 10000
 
 	go func() {
-		require.NoError(t, srv.Listen(fmt.Sprintf("localhost:%d", port)))
+		assert.NoError(t, srv.Listen(fmt.Sprintf("localhost:%d", port)))
 	}()
 	defer srv.Close()
 

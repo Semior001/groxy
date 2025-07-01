@@ -10,9 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: set up go 1.22.0
+      - name: set up go 1.24.0
         uses: actions/setup-go@v4
-        with: { go-version: 1.22.0 }
+        with: { go-version: 1.24.0 }
 
       - name: checkout
         uses: actions/checkout@v2
@@ -34,15 +34,10 @@ jobs:
         env:
           COVERALLS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.56.2
-          working-directory: .
-          args: --timeout 5m
-          skip-cache: true
-          skip-pkg-cache: true
-          skip-build-cache: true
+          version: v2.1.6
 
       - name: set up QEMU
         uses: docker/setup-qemu-action@v1

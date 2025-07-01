@@ -1,4 +1,4 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 ENV CGO_ENABLED=0
 
@@ -22,7 +22,7 @@ RUN \
     echo "version: $version" && \
     go build -o /go/build/groxy -ldflags "-X 'main.version=${version}' -s -w" /srv/cmd/groxy
 
-FROM alpine:3.14 AS base
+FROM alpine:3.22 AS base
 
 RUN apk add --no-cache --update tzdata && \
     cp /usr/share/zoneinfo/Asia/Almaty /etc/localtime && \

@@ -26,7 +26,7 @@ func TestRule_String(t *testing.T) {
 	}).String()
 
 	// for some reason, the proto message string sometimes generates two spaces between fields
-	got = strings.Replace(got, "  ", " ", -1)
+	got = strings.ReplaceAll(got, "  ", " ")
 
 	assert.Equal(t, "(name; 2 metadata; with body: {request_id:\"request-id\" serving_data:\"serving-data\"})", got)
 }
