@@ -34,12 +34,20 @@ func Test_builder_parseValue(t *testing.T) {
 		name string
 		fd   fdMock
 		val  string
+		data any
 		want any
 	}{
 		{
 			name: "string",
 			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_STRING},
 			val:  "Hello, World!",
+			want: "Hello, World!",
+		},
+		{
+			name: "templated string",
+			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_STRING},
+			val:  "{{.Data}}",
+			data: struct{ Data string }{Data: "Hello, World!"},
 			want: "Hello, World!",
 		},
 		{
@@ -82,6 +90,22 @@ func Test_builder_parseValue(t *testing.T) {
 			want: map[int32]string{42: "value"},
 		},
 		{
+			name: "templated map",
+			fd: fdMock{isMap: true,
+				keyTyp: descriptorpb.FieldDescriptorProto_TYPE_INT32,
+				valTyp: descriptorpb.FieldDescriptorProto_TYPE_STRING,
+			},
+			val: `{{"{"}}{{index .Slice 1}}: "{{.Data}}"}`,
+			data: struct {
+				Data  string
+				Slice []int32
+			}{
+				Data:  "Hello, World!",
+				Slice: []int32{1, 2, 3},
+			},
+			want: map[int32]string{2: "Hello, World!"},
+		},
+		{
 			name: "bytes",
 			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_BYTES},
 			val:  "SGVsbG8sIFdvcmxkIQ==",
@@ -90,7 +114,7 @@ func Test_builder_parseValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := (&Definer{}).buildValue(tt.fd, tt.val)
+			got, err := (&Definer{}).buildValue(tt.fd, tt.val, tt.data)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -112,7 +136,7 @@ func TestBuildMessage(t *testing.T) {
 			},
 		}
 
-		gotDyn, err := BuildMessage(def)
+		gotDyn, err := BuildMessage(def, nil)
 		require.NoError(t, err)
 		got := &testdata.Response{}
 		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, gotDyn), got))
@@ -240,7 +264,7 @@ func TestBuildMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := BuildMessage(tt.def)
+			got, err := BuildMessage(tt.def, nil)
 			switch tt.wantErr {
 			case nil:
 				require.NoError(t, err)

@@ -236,7 +236,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
 
 	if r.Match.Body != nil {
-		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {
+		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body, nil); err != nil {
 			return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
 		}
 	}
@@ -290,7 +290,7 @@ func parseRespond(r *Respond) (result *discovery.Mock, err error) {
 		}
 		result.Status = status.New(code, r.Status.Message)
 	case r.Body != nil:
-		if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
+		if result.Body, err = protodef.BuildMessage(*r.Body, nil); err != nil {
 			return nil, fmt.Errorf("build respond message: %w", err)
 		}
 	default:

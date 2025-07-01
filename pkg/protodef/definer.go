@@ -12,6 +12,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/Semior001/groxy/groxypb"
 	"github.com/bufbuild/protocompile/reporter"
@@ -27,7 +28,10 @@ import (
 
 // Definer parses protobuf snippets and builds protobuf messages
 // according to the specified groxy option values.
-type Definer struct{ loadFromOS bool }
+type Definer struct {
+	loadFromOS    bool
+	templateFuncs template.FuncMap
+}
 
 // NewDefiner returns a new Definer with the given options applied.
 func NewDefiner(opts ...Option) *Definer {
@@ -40,7 +44,7 @@ func NewDefiner(opts ...Option) *Definer {
 
 // BuildTarget seeks the target message in the given protobuf snippet and
 // returns a proto.Message that can be used to respond requests or match requests to.
-func (b *Definer) BuildTarget(def string) (proto.Message, error) {
+func (b *Definer) BuildTarget(def string, data any) (proto.Message, error) {
 	def, err := b.joinMultilineStrings(def)
 	if err != nil {
 		return nil, fmt.Errorf("invalid file: %w", err)
@@ -58,7 +62,7 @@ func (b *Definer) BuildTarget(def string) (proto.Message, error) {
 		return nil, fmt.Errorf("find target message: %w", err)
 	}
 
-	msg, err := b.buildMessage(target)
+	msg, err := b.buildMessage(target, data)
 	if err != nil {
 		return nil, fmt.Errorf("parse message: %w", err)
 	}
@@ -191,19 +195,19 @@ func (b *Definer) findTarget(fd *desc.FileDescriptor) (*desc.MessageDescriptor, 
 	}
 }
 
-func (b *Definer) buildMessage(target *desc.MessageDescriptor) (*dynamic.Message, error) {
+func (b *Definer) buildMessage(target *desc.MessageDescriptor, data any) (*dynamic.Message, error) {
 	msg := dynamic.NewMessage(target)
 	for _, field := range target.GetFields() {
-		if err := b.setField(msg, field); err != nil {
+		if err := b.setField(msg, field, data); err != nil {
 			return nil, fmt.Errorf("set field %q: %w", field.GetName(), err)
 		}
 	}
 	return msg, nil
 }
 
-func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor) error {
+func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor, data any) error {
 	val, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Value).(string)
-	v, err := b.buildValue(fieldDescriptorWrapper{FieldDescriptor: field}, val)
+	v, err := b.buildValue(fieldDescriptorWrapper{FieldDescriptor: field}, val, data)
 	if err != nil {
 		return fmt.Errorf("parse value: %w", err)
 	}
@@ -215,7 +219,22 @@ func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor) er
 	return nil
 }
 
-func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
+func (b *Definer) buildValue(field fieldDescriptor, s string, data any) (any, error) {
+	tmpl, err := template.
+		New("").
+		Funcs(b.templateFuncs).
+		Parse(s)
+	if err != nil {
+		return nil, fmt.Errorf("parse template %q: %w", s, err)
+	}
+
+	var buf strings.Builder
+	if err = tmpl.Execute(&buf, data); err != nil {
+		return nil, fmt.Errorf("execute template %q: %w", s, err)
+	}
+
+	s = buf.String()
+
 	if s == "" {
 		switch {
 		case field.IsMap():
@@ -223,7 +242,7 @@ func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
 		case field.IsRepeated():
 			return b.buildRepeated(field, "[]")
 		case isMsg(field.GetType()): // repeated and map is just a repeated message
-			return b.buildMessage(field.GetMessageType())
+			return b.buildMessage(field.GetMessageType(), data)
 		case isEnum(field.GetType()):
 			return int32(0), nil
 		default:
