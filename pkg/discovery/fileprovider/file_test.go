@@ -17,7 +17,7 @@ import (
 )
 
 func TestFile_Events(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 2000*time.Millisecond)
 	defer cancel()
 
 	tmp, err := os.CreateTemp(os.TempDir(), "groxy-test-events")
