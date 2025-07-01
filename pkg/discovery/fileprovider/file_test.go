@@ -28,15 +28,15 @@ func TestFile_Events(t *testing.T) {
 	f := File{
 		FileName:      tmp.Name(),
 		CheckInterval: 100 * time.Millisecond,
-		Delay:         200 * time.Millisecond,
+		Delay:         500 * time.Millisecond,
 	}
 
 	go func() { //nolint:testifylint // we can't use require.NoError here
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(600 * time.Millisecond)
 		assert.NoError(t, os.WriteFile(tmp.Name(), []byte("something"), 0o600))
 
 		// all those event will be ignored, submitted too fast
