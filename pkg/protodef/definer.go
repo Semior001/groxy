@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"os"
 	"reflect"
@@ -26,6 +27,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var defaultFuncs = template.FuncMap{"uuid": uuid.NewString}
+
 // Definer parses protobuf snippets and builds protobuf messages
 // according to the specified groxy option values.
 type Definer struct {
@@ -35,7 +38,7 @@ type Definer struct {
 
 // NewDefiner returns a new Definer with the given options applied.
 func NewDefiner(opts ...Option) *Definer {
-	d := &Definer{}
+	d := &Definer{templateFuncs: defaultFuncs}
 	for _, opt := range opts {
 		opt(d)
 	}

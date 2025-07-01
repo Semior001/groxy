@@ -1,6 +1,8 @@
 package protodef
 
 import (
+	"github.com/google/uuid"
+	"math/rand"
 	"testing"
 
 	"github.com/Semior001/groxy/pkg/protodef/testdata"
@@ -136,13 +138,15 @@ func TestBuildMessage(t *testing.T) {
 			},
 		}
 
-		gotDyn, err := BuildMessage(def, nil)
+		gotDyn, err := BuildTarget(def, nil)
 		require.NoError(t, err)
 		got := &testdata.Response{}
 		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, gotDyn), got))
 		assert.Truef(t, proto.Equal(want, got),
 			"expected: %v\nactual: %v", want.String(), got.String())
 	})
+
+	uuid.SetRand(rand.New(rand.NewSource(0)))
 
 	tests := []struct {
 		name    string
@@ -234,6 +238,18 @@ func TestBuildMessage(t *testing.T) {
 			}},
 		},
 		{
+			name: "repeated nested message, value in target, templated",
+			def: `	message Nested { string value = 6; }
+					message StubResponse {
+						option (groxypb.target) = true;
+						repeated Nested nested = 10 [(groxypb.value) = '[{"value": "{{uuid}}"}, {"value": "{{uuid}}"}]'];
+					}`,
+			want: &testdata.Response{Nesteds: []*testdata.Nested{
+				{NestedValue: "0194fdc2-fa2f-4cc0-81d3-ff12045b73c8"},
+				{NestedValue: "6e4ff95f-f662-45ee-a82a-bdf44a2d0b75"},
+			}},
+		},
+		{
 			name: "zero enum, zero map, zero repeated, zero known field",
 			def: `	enum SomeEnum { EMPTY = 0; }
 					message Nested { string value = 6; }
@@ -264,7 +280,7 @@ func TestBuildMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := BuildMessage(tt.def, nil)
+			got, err := BuildTarget(tt.def, nil)
 			switch tt.wantErr {
 			case nil:
 				require.NoError(t, err)

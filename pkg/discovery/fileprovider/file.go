@@ -132,7 +132,7 @@ func (d *File) State(ctx context.Context) (*discovery.State, error) {
 func (d *File) rules(cfg Config, upstreams []discovery.Upstream) ([]*discovery.Rule, error) {
 	rules := make([]*discovery.Rule, 0, len(cfg.Rules)+1)
 	for idx, r := range cfg.Rules {
-		rule, err := parseRule(r, upstreams)
+		rule, err := d.parseRule(r, upstreams)
 		if err != nil {
 			return nil, fmt.Errorf("parse rule #%d: %w", idx, err)
 		}
@@ -141,7 +141,7 @@ func (d *File) rules(cfg Config, upstreams []discovery.Upstream) ([]*discovery.R
 	}
 
 	if cfg.NotMatched != nil {
-		mock, err := parseRespond(cfg.NotMatched)
+		mock, err := d.parseRespond(cfg.NotMatched)
 		if err != nil {
 			return nil, fmt.Errorf("parse respond: %w", err)
 		}
@@ -223,7 +223,7 @@ func (d *File) getModifTime(ctx context.Context) (modif time.Time, ok bool) {
 	return fi.ModTime(), true
 }
 
-func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, err error) {
+func (d *File) parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, err error) {
 	if r.Match.URI == "" {
 		return discovery.Rule{}, fmt.Errorf("empty URI in rule")
 	}
@@ -236,7 +236,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
 
 	if r.Match.Body != nil {
-		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body, nil); err != nil {
+		if result.Match.Message, err = protodef.BuildTarget(*r.Match.Body, nil); err != nil {
 			return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
 		}
 	}
@@ -254,7 +254,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 		}
 	}
 
-	if result.Mock, err = parseRespond(r.Respond); err != nil {
+	if result.Mock, err = d.parseRespond(r.Respond); err != nil {
 		return discovery.Rule{}, fmt.Errorf("parse respond: %w", err)
 	}
 
@@ -268,7 +268,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 	return result, nil
 }
 
-func parseRespond(r *Respond) (result *discovery.Mock, err error) {
+func (d *File) parseRespond(r *Respond) (result *discovery.Mock, err error) {
 	if r == nil {
 		return nil, nil
 	}
@@ -290,7 +290,7 @@ func parseRespond(r *Respond) (result *discovery.Mock, err error) {
 		}
 		result.Status = status.New(code, r.Status.Message)
 	case r.Body != nil:
-		if result.Body, err = protodef.BuildMessage(*r.Body, nil); err != nil {
+		if result.Body, err = protodef.BuildTarget(*r.Body, nil); err != nil {
 			return nil, fmt.Errorf("build respond message: %w", err)
 		}
 	default:
