@@ -21,7 +21,7 @@ tasks:
   lint:
     desc: "lint"
     cmds:
-      - golangci-lint run --config=.golangci.yml --timeout=5m ./...
+      - go tool golangci-lint run --config=.golangci.yml --timeout=5m ./...
 
   test:
     desc: "run tests"
