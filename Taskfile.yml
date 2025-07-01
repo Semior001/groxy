@@ -18,6 +18,11 @@ tasks:
       - test
       - lint
 
+  run:
+    desc: "run application from local source"
+    cmd: |
+      go run -ldflags "-X 'main.version=local'" ./cmd/groxy {{.CLI_ARGS}}
+
   lint:
     desc: "lint"
     cmd: |
