@@ -137,10 +137,10 @@ The `Respond` section contains the response for the request. The respond section
 
 The `Forward` section contains the upstream to which the request should be forwarded. The forward section may contain the following fields:
 
-| Field    | Required | Description                                                        |
-|----------|----------|--------------------------------------------------------------------|
-| upstream | true     | The name of the upstream to which the request should be forwarded. |
-| header   | optional | The headers to be sent with the request.                           |
+| Field    | Required | Description                                                                                                                                       |
+|----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| upstream | true     | The name of the upstream to which the request should be forwarded. Supports templating: use `env` function to get the environment variable value. |
+| header   | optional | The headers to be sent with the request.                                                                                                          |
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 

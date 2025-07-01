@@ -60,6 +60,8 @@ func TestFile_Events(t *testing.T) {
 var f string
 
 func TestFile_Rules(t *testing.T) {
+	require.NoError(t, os.Setenv("TEST_DYNAMIC_ENV_ADDR", "localhost:50053"))
+
 	tmp, err := os.CreateTemp(os.TempDir(), "groxy-test-rules")
 	require.NoError(t, err)
 	_ = tmp.Close()
@@ -159,16 +161,24 @@ func TestFile_Upstreams(t *testing.T) {
 		Delay:         200 * time.Millisecond,
 	}
 
+	require.NoError(t, os.Setenv("TEST_DYNAMIC_ENV_ADDR", "localhost:50053"))
+
 	state, err := f.State(context.Background())
 	require.NoError(t, err)
 
-	require.Len(t, state.Upstreams, 2)
-	assert.Equal(t, "example-1", state.Upstreams[0].Name())
-	assert.Equal(t, "localhost:50051", state.Upstreams[0].Target())
-	assert.True(t, state.Upstreams[0].Reflection())
-	// TODO: check somehow TLS
+	require.Len(t, state.Upstreams, 3)
 
-	assert.Equal(t, "example-2", state.Upstreams[1].Name())
-	assert.Equal(t, "localhost:50052", state.Upstreams[1].Target())
-	assert.False(t, state.Upstreams[1].Reflection())
+	for idx, up := range []struct {
+		name       string
+		target     string
+		reflection bool
+	}{
+		{name: "dynamic-env", target: "localhost:50053", reflection: true},
+		{name: "example-1", target: "localhost:50051", reflection: true},
+		{name: "example-2", target: "localhost:50052", reflection: false},
+	} {
+		assert.Equal(t, up.name, state.Upstreams[idx].Name())
+		assert.Equal(t, up.target, state.Upstreams[idx].Target())
+		assert.Equal(t, up.reflection, state.Upstreams[idx].Reflection())
+	}
 }
