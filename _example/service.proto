@@ -10,6 +10,10 @@ service ExampleService {
   rpc NotFound(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
+service Upstream {
+  rpc Get(google.protobuf.Empty) returns (google.protobuf.Empty);
+}
+
 message Dependency {
   string first = 1;
   string second = 2;

@@ -17,7 +17,7 @@ upstreams:
     serve-reflection: true
 
 rules:
-    # The next rule will respond with a predefined message.
+    # The next rule will respond with a predefined message on the request with header "test: true".
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
       header: { test: true }
@@ -35,7 +35,23 @@ rules:
             int32 code     = 2 [(groxypb.value)  = "200"];
         }
 
-    # The next rule will respond with a predefined message.
+    # The next rule is almost the same as the previous one, but the response is templated:
+    # random UUID will be provided in the response message.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "random"];
+        }
+    respond:
+      body: |
+        message StubResponse { 
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "{{uuid}}"];
+        }
+
+    # The next rule will respond with a predefined message on any request that matches URI and request body.
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
       body: |

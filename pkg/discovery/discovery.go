@@ -8,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
-	"google.golang.org/grpc"
 )
 
 // Provider provides routing rules for the Service.
