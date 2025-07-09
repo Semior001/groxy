@@ -32,13 +32,30 @@ func TestRule_String(t *testing.T) {
 }
 
 func TestRequestMatcher_Matches(t *testing.T) {
-	rm := RequestMatcher{
-		URI:              regexp.MustCompile(`^/v1/example/.*$`),
-		IncomingMetadata: map[string]*regexp.Regexp{"key": regexp.MustCompile("^value.*$")},
-	}
-	assert.True(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "value"})))
-	assert.True(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "value123"})))
-	assert.False(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "v"})))
-	assert.False(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"another": "value"})))
-	assert.False(t, rm.Matches("/v2/example/123", metadata.New(map[string]string{"key": "value"})))
+	t.Run("single value", func(t *testing.T) {
+		rm := RequestMatcher{
+			URI:              regexp.MustCompile(`^/v1/example/.*$`),
+			IncomingMetadata: map[string]*regexp.Regexp{"key": regexp.MustCompile("^value.*$")},
+		}
+		assert.True(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "value"})))
+		assert.True(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "value123"})))
+		assert.False(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"key": "v"})))
+		assert.False(t, rm.Matches("/v1/example/123", metadata.New(map[string]string{"another": "value"})))
+		assert.False(t, rm.Matches("/v2/example/123", metadata.New(map[string]string{"key": "value"})))
+	})
+
+	t.Run("multiple values", func(t *testing.T) {
+		rm := RequestMatcher{
+			IncomingMetadata: map[string]*regexp.Regexp{"key": regexp.MustCompile("^v1,v2$")},
+		}
+
+		md := metadata.Pairs("key", "v1", "key", "v2")
+		assert.True(t, rm.Matches("any-uri", md))
+
+		md = metadata.Pairs("key", "v1")
+		assert.False(t, rm.Matches("any-uri", md))
+
+		md = metadata.Pairs("key", "v2", "key", "v1")
+		assert.False(t, rm.Matches("any-uri", md), "should not match on wrong order")
+	})
 }

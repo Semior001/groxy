@@ -113,15 +113,8 @@ func (r RequestMatcher) Matches(uri string, md metadata.MD) bool {
 			return false
 		}
 
-		var matched bool
-		for _, val := range vals {
-			if re.MatchString(val) {
-				matched = true
-				break
-			}
-		}
-
-		if !matched {
+		// Join multiple values into a single string to allow matching against the whole.
+		if !re.MatchString(strings.Join(vals, ",")) {
 			return false
 		}
 	}
