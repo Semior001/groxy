@@ -9,19 +9,20 @@ import (
 	"regexp"
 	"time"
 
+	"crypto/tls"
+	"sort"
+
 	"github.com/Semior001/groxy/pkg/discovery"
+	"github.com/Semior001/groxy/pkg/grpcx"
 	"github.com/Semior001/groxy/pkg/protodef"
 	"github.com/cappuccinotm/slogx"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v3"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/credentials"
-	"crypto/tls"
-	"sort"
-	"github.com/Semior001/groxy/pkg/grpcx"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -219,7 +220,16 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 		return discovery.Rule{}, fmt.Errorf("compile URI regexp: %w", err)
 	}
 
-	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
+	if len(r.Match.Header) > 0 {
+		result.Match.IncomingMetadata = make(map[string]*regexp.Regexp, len(r.Match.Header))
+		for k, v := range r.Match.Header {
+			re, err := regexp.Compile(v)
+			if err != nil {
+				return discovery.Rule{}, fmt.Errorf("compile header %q regexp: %w", k, err)
+			}
+			result.Match.IncomingMetadata[k] = re
+		}
+	}
 
 	if r.Match.Body != nil {
 		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {

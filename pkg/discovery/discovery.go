@@ -4,15 +4,14 @@ package discovery
 import (
 	"context"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
-	"google.golang.org/grpc"
 )
 
 // Provider provides routing rules for the Service.
@@ -95,7 +94,8 @@ type RequestMatcher struct {
 	URI *regexp.Regexp
 
 	// IncomingMetadata contains the metadata of the incoming request.
-	IncomingMetadata metadata.MD
+	// The key is the metadata key, and the value is the regexp to match against the metadata value.
+	IncomingMetadata map[string]*regexp.Regexp
 
 	// Message contains the expected first RECV message of the request.
 	Message proto.Message
@@ -107,8 +107,14 @@ func (r RequestMatcher) Matches(uri string, md metadata.MD) bool {
 		return false
 	}
 
-	for k, v := range r.IncomingMetadata {
-		if !slices.Equal(v, md.Get(k)) {
+	for k, re := range r.IncomingMetadata {
+		vals := md.Get(k)
+		if len(vals) == 0 {
+			return false
+		}
+
+		// Join multiple values into a single string to allow matching against the whole.
+		if !re.MatchString(strings.Join(vals, ",")) {
 			return false
 		}
 	}
