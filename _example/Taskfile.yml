@@ -3,6 +3,15 @@
 version: '3'
 
 tasks:
+  server:
+    desc: start the example server
+    summary: |
+      starts the example server on port 8080, requires the upstream service to be running
+    cmd: |
+      go run -ldflags "-X 'main.version=local'" ./cmd/groxy \
+        --file.name='_example/mock.yaml' --signature --debug --reflection \
+        {{.CLI_ARGS}}
+
   stub-with-header:
     desc: >-
       make a request to stub method with header 'test: true', see summary for details
