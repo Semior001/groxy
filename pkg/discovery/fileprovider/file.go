@@ -234,7 +234,16 @@ func (d *File) parseRule(r Rule, upstreams []discovery.Upstream) (result discove
 		return discovery.Rule{}, fmt.Errorf("compile URI regexp: %w", err)
 	}
 
-	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
+	if len(r.Match.Header) > 0 {
+		result.Match.IncomingMetadata = make(map[string]*regexp.Regexp, len(r.Match.Header))
+		for k, v := range r.Match.Header {
+			re, err := regexp.Compile(v)
+			if err != nil {
+				return discovery.Rule{}, fmt.Errorf("compile header %q regexp: %w", k, err)
+			}
+			result.Match.IncomingMetadata[k] = re
+		}
+	}
 
 	if r.Match.Body != nil {
 		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {

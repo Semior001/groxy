@@ -4,7 +4,6 @@ package discovery
 import (
 	"context"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -97,7 +96,8 @@ type RequestMatcher struct {
 	URI *regexp.Regexp
 
 	// IncomingMetadata contains the metadata of the incoming request.
-	IncomingMetadata metadata.MD
+	// The key is the metadata key, and the value is the regexp to match against the metadata value.
+	IncomingMetadata map[string]*regexp.Regexp
 
 	// Message contains the expected first RECV message of the request.
 	Message protodef.Template
@@ -109,8 +109,14 @@ func (r RequestMatcher) Matches(uri string, md metadata.MD) bool {
 		return false
 	}
 
-	for k, v := range r.IncomingMetadata {
-		if !slices.Equal(v, md.Get(k)) {
+	for k, re := range r.IncomingMetadata {
+		vals := md.Get(k)
+		if len(vals) == 0 {
+			return false
+		}
+
+		// Join multiple values into a single string to allow matching against the whole.
+		if !re.MatchString(strings.Join(vals, ",")) {
 			return false
 		}
 	}

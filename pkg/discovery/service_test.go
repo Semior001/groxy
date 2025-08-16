@@ -36,15 +36,15 @@ func TestService_MatchMetadata(t *testing.T) {
 		rules: []*Rule{
 			{Name: "1", Match: RequestMatcher{
 				URI:              regexp.MustCompile("test"),
-				IncomingMetadata: metadata.New(map[string]string{"uri": "not-match"}),
+				IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("not-match")},
 			}},
 			{Name: "2", Match: RequestMatcher{
 				URI:              regexp.MustCompile("uri"),
-				IncomingMetadata: metadata.New(map[string]string{"uri": "test"}),
+				IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("test")},
 			}},
 			{Name: "3", Match: RequestMatcher{
 				URI:              regexp.MustCompile("uri"),
-				IncomingMetadata: metadata.New(map[string]string{"uri": "test"}),
+				IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("test")},
 			}},
 		},
 	}
@@ -97,7 +97,7 @@ func TestService_Run(t *testing.T) {
 			StateFunc: func(context.Context) (*State, error) {
 				return &State{Rules: []*Rule{
 					{Name: "1", Match: RequestMatcher{}},
-					{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
+					{Name: "2", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("test")}}},
 				}}, nil
 			},
 		}
@@ -108,10 +108,10 @@ func TestService_Run(t *testing.T) {
 			},
 			StateFunc: func(context.Context) (*State, error) {
 				return &State{Rules: []*Rule{
-					{Name: "3", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{
-						"uri":  "test",
-						"uri2": "test2",
-					})}},
+					{Name: "3", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{
+						"uri":  regexp.MustCompile("test"),
+						"uri2": regexp.MustCompile("test2"),
+					}}},
 				}}, nil
 			},
 		}
@@ -131,11 +131,11 @@ func TestService_Run(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, context.DeadlineExceeded, err)
 		assert.Equal(t, []*Rule{
-			{Name: "3", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{
-				"uri":  "test",
-				"uri2": "test2",
-			})}},
-			{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
+			{Name: "3", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{
+				"uri":  regexp.MustCompile("test"),
+				"uri2": regexp.MustCompile("test2"),
+			}}},
+			{Name: "2", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("test")}}},
 			{Name: "1", Match: RequestMatcher{}},
 		}, svc.rules)
 	})
@@ -153,7 +153,7 @@ func TestService_Run(t *testing.T) {
 			StateFunc: func(context.Context) (*State, error) {
 				return &State{Rules: []*Rule{
 					{Name: "1", Match: RequestMatcher{}},
-					{Name: "2", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{"uri": "test"})}},
+					{Name: "2", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{"uri": regexp.MustCompile("test")}}},
 				}}, nil
 			},
 		}
@@ -164,10 +164,10 @@ func TestService_Run(t *testing.T) {
 			},
 			StateFunc: func(context.Context) (*State, error) {
 				return &State{Rules: []*Rule{
-					{Name: "3", Match: RequestMatcher{IncomingMetadata: metadata.New(map[string]string{
-						"uri":  "test",
-						"uri2": "test2",
-					})}},
+					{Name: "3", Match: RequestMatcher{IncomingMetadata: map[string]*regexp.Regexp{
+						"uri":  regexp.MustCompile("test"),
+						"uri2": regexp.MustCompile("test2"),
+					}}},
 				}}, nil
 			},
 		}

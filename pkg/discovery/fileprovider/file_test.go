@@ -98,7 +98,7 @@ func TestFile_Rules(t *testing.T) {
 			Name: "com.github.Semior001.groxy.example.mock.ExampleService/Stub",
 			Match: discovery.RequestMatcher{
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.ExampleService/Stub"),
-				IncomingMetadata: map[string][]string{"test": {"true"}},
+				IncomingMetadata: map[string]*regexp.Regexp{"test": regexp.MustCompile("true")},
 			},
 			Mock: &discovery.Mock{},
 		},
@@ -106,7 +106,7 @@ func TestFile_Rules(t *testing.T) {
 			Name: "com.github.Semior001.groxy.example.mock.ExampleService/Stub",
 			Match: discovery.RequestMatcher{
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.ExampleService/Stub"),
-				IncomingMetadata: metadata.New(nil),
+				IncomingMetadata: nil,
 			},
 			Mock: &discovery.Mock{},
 		},
@@ -114,7 +114,7 @@ func TestFile_Rules(t *testing.T) {
 			Name: "com.github.Semior001.groxy.example.mock.ExampleService/Stub",
 			Match: discovery.RequestMatcher{
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.ExampleService/Stub"),
-				IncomingMetadata: metadata.New(nil),
+				IncomingMetadata: nil,
 			},
 			Mock: &discovery.Mock{},
 		},
@@ -122,7 +122,7 @@ func TestFile_Rules(t *testing.T) {
 			Name: "com.github.Semior001.groxy.example.mock.ExampleService/Error",
 			Match: discovery.RequestMatcher{
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.ExampleService/Error"),
-				IncomingMetadata: metadata.New(nil),
+				IncomingMetadata: nil,
 			},
 			Mock: &discovery.Mock{
 				Status:  status.New(codes.InvalidArgument, "invalid request"),
@@ -134,7 +134,7 @@ func TestFile_Rules(t *testing.T) {
 			Name: "com.github.Semior001.groxy.example.mock.Upstream/Get",
 			Match: discovery.RequestMatcher{
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.Upstream/Get"),
-				IncomingMetadata: metadata.New(nil),
+				IncomingMetadata: nil,
 			},
 		},
 		{
