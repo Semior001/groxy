@@ -1,9 +1,11 @@
 package protodef
 
 import (
-	"github.com/google/uuid"
+	"context"
 	"math/rand"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/Semior001/groxy/pkg/protodef/testdata"
 	"github.com/jhump/protoreflect/desc"
@@ -46,13 +48,6 @@ func Test_builder_parseValue(t *testing.T) {
 			want: "Hello, World!",
 		},
 		{
-			name: "templated string",
-			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_STRING},
-			val:  "{{.Data}}",
-			data: struct{ Data string }{Data: "Hello, World!"},
-			want: "Hello, World!",
-		},
-		{
 			name: "int32",
 			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_INT32},
 			val:  "42",
@@ -91,22 +86,7 @@ func Test_builder_parseValue(t *testing.T) {
 			val:  `{42: "value"}`,
 			want: map[int32]string{42: "value"},
 		},
-		{
-			name: "templated map",
-			fd: fdMock{isMap: true,
-				keyTyp: descriptorpb.FieldDescriptorProto_TYPE_INT32,
-				valTyp: descriptorpb.FieldDescriptorProto_TYPE_STRING,
-			},
-			val: `{{"{"}}{{index .Slice 1}}: "{{.Data}}"}`,
-			data: struct {
-				Data  string
-				Slice []int32
-			}{
-				Data:  "Hello, World!",
-				Slice: []int32{1, 2, 3},
-			},
-			want: map[int32]string{2: "Hello, World!"},
-		},
+
 		{
 			name: "bytes",
 			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_BYTES},
@@ -116,7 +96,7 @@ func Test_builder_parseValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := (&Definer{}).buildValue(tt.fd, tt.val, tt.data)
+			got, err := buildValue(tt.fd, tt.val)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -138,10 +118,14 @@ func TestBuildMessage(t *testing.T) {
 			},
 		}
 
-		gotDyn, err := BuildTarget(def, nil)
+		gotDyn, err := BuildMessage(def)
 		require.NoError(t, err)
 		got := &testdata.Response{}
-		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, gotDyn), got))
+
+		msg, err := gotDyn.Generate(context.TODO(), nil)
+		require.NoError(t, err)
+
+		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, msg), got))
 		assert.Truef(t, proto.Equal(want, got),
 			"expected: %v\nactual: %v", want.String(), got.String())
 	})
@@ -280,11 +264,13 @@ func TestBuildMessage(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := BuildTarget(tt.def, nil)
+			got, err := BuildMessage(tt.def)
 			switch tt.wantErr {
 			case nil:
 				require.NoError(t, err)
-				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, got))
+				msg, err := got.Generate(context.TODO(), nil)
+				require.NoError(t, err)
+				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, msg))
 			default:
 				require.ErrorIs(t, err, tt.wantErr)
 			}

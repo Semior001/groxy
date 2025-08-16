@@ -1,16 +1,16 @@
 package protodef
 
 import (
-	"github.com/samber/lo"
-	"google.golang.org/protobuf/proto"
 	"text/template"
+
+	"github.com/samber/lo"
 )
 
-// BuildTarget parses the protobuf definition with groxy options and
+var globalDefiner = NewDefiner()
+
+// BuildMessage parses the protobuf definition with groxy options and
 // returns a proto.Message that can be used to respond requests or match requests to.
-func BuildTarget(def string, data any, opts ...Option) (proto.Message, error) {
-	return NewDefiner(opts...).BuildTarget(def, data)
-}
+func BuildMessage(def string) (Template, error) { return globalDefiner.BuildTarget(def) }
 
 // Option is a functional option for the definer.
 type Option func(*Definer)
@@ -22,6 +22,6 @@ func LoadOS(d *Definer) { d.loadFromOS = true }
 // Note: function with the name that has been already defined will be overwritten.
 func WithFuncs(funcs template.FuncMap) Option {
 	return func(d *Definer) {
-		d.templateFuncs = lo.Assign(d.templateFuncs, funcs)
+		d.funcs = lo.Assign(d.funcs, funcs)
 	}
 }

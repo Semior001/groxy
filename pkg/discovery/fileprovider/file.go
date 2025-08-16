@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"crypto/tls"
+	"sort"
+
 	"github.com/Semior001/groxy/pkg/discovery"
 	"github.com/Semior001/groxy/pkg/grpcx"
 	"github.com/Semior001/groxy/pkg/protodef"
@@ -23,7 +25,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"gopkg.in/yaml.v3"
-	"sort"
 )
 
 // File discovers the changes in routing rules from a file.
@@ -236,7 +237,7 @@ func (d *File) parseRule(r Rule, upstreams []discovery.Upstream) (result discove
 	result.Match.IncomingMetadata = metadata.New(r.Match.Header)
 
 	if r.Match.Body != nil {
-		if result.Match.Message, err = protodef.BuildTarget(*r.Match.Body, nil); err != nil {
+		if result.Match.Message, err = protodef.BuildMessage(*r.Match.Body); err != nil {
 			return discovery.Rule{}, fmt.Errorf("build request matcher message: %w", err)
 		}
 	}
@@ -290,7 +291,7 @@ func (d *File) parseRespond(r *Respond) (result *discovery.Mock, err error) {
 		}
 		result.Status = status.New(code, r.Status.Message)
 	case r.Body != nil:
-		if result.Body, err = protodef.BuildTarget(*r.Body, nil); err != nil {
+		if result.Body, err = protodef.BuildMessage(*r.Body); err != nil {
 			return nil, fmt.Errorf("build respond message: %w", err)
 		}
 	default:

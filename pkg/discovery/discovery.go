@@ -8,10 +8,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Semior001/groxy/pkg/protodef"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
 )
 
@@ -44,7 +44,7 @@ type State struct {
 type Mock struct {
 	Header  metadata.MD
 	Trailer metadata.MD
-	Body    proto.Message
+	Body    protodef.Template
 	Status  *status.Status
 }
 
@@ -81,7 +81,9 @@ func (r *Rule) String() string {
 	_, _ = sb.WriteString(" metadata")
 	if r.Match.Message != nil {
 		_, _ = sb.WriteString("; with body: {")
-		_, _ = sb.WriteString(protoadapt.MessageV1Of(r.Match.Message).String())
+		if msg, err := r.Match.Message.Generate(context.TODO(), nil); err == nil {
+			_, _ = sb.WriteString(protoadapt.MessageV1Of(msg).String())
+		}
 		_, _ = sb.WriteString("}")
 	}
 	_, _ = sb.WriteString(")")
@@ -98,7 +100,7 @@ type RequestMatcher struct {
 	IncomingMetadata metadata.MD
 
 	// Message contains the expected first RECV message of the request.
-	Message proto.Message
+	Message protodef.Template
 }
 
 // Matches returns true if the request metadata is matched to the rule.

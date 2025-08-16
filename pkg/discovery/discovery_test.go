@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Semior001/groxy/pkg/protodef"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/metadata"
@@ -18,10 +19,10 @@ func TestRule_String(t *testing.T) {
 				"key":  "value",
 				"key2": "value2",
 			}),
-			Message: &errdetails.RequestInfo{
+			Message: protodef.Static{Message: &errdetails.RequestInfo{
 				RequestId:   "request-id",
 				ServingData: "serving-data",
-			},
+			}},
 		},
 	}).String()
 
