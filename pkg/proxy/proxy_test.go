@@ -1,21 +1,23 @@
 package proxy
 
 import (
-	"testing"
-	"github.com/Semior001/groxy/pkg/proxy/mocks"
-	"google.golang.org/grpc/metadata"
-	"github.com/Semior001/groxy/pkg/discovery"
-	"regexp"
-	"google.golang.org/grpc/status"
-	"google.golang.org/grpc/codes"
-	"math/rand"
-	"github.com/stretchr/testify/require"
-	"fmt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"context"
+	"fmt"
+	"math/rand"
+	"regexp"
+	"testing"
+
+	"github.com/Semior001/groxy/pkg/discovery"
 	"github.com/Semior001/groxy/pkg/grpcx/grpctest"
+	"github.com/Semior001/groxy/pkg/protodef"
+	"github.com/Semior001/groxy/pkg/proxy/mocks"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 func TestServer_handle(t *testing.T) {
@@ -55,7 +57,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with status)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: &grpctest.StreamRequest{Value: "error"},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "error"}),
 					},
 					Mock: &discovery.Mock{
 						Status: status.New(codes.Internal, "test"),
@@ -65,7 +67,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with metadata)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: &grpctest.StreamRequest{Value: "metadata"},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "metadata"}),
 					},
 					Mock: &discovery.Mock{
 						Header: metadata.Pairs("test", "test"),
@@ -76,7 +78,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (forward to backend)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: &grpctest.StreamRequest{Value: "forward"},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "forward"}),
 					},
 					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
@@ -88,10 +90,10 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with response)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: &grpctest.StreamRequest{Value: "response"},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "response"}),
 					},
 					Mock: &discovery.Mock{
-						Body: &grpctest.StreamResponse{Value: "test"},
+						Body: protodef.Static(&grpctest.StreamResponse{Value: "test"}),
 					},
 				},
 				{

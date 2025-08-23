@@ -3,13 +3,15 @@ package fileprovider
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"html/template"
 	"log/slog"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 
-	"crypto/tls"
 	"sort"
 
 	"github.com/Semior001/groxy/pkg/discovery"
@@ -131,7 +133,7 @@ func (d *File) State(ctx context.Context) (*discovery.State, error) {
 func (d *File) rules(cfg Config, upstreams []discovery.Upstream) ([]*discovery.Rule, error) {
 	rules := make([]*discovery.Rule, 0, len(cfg.Rules)+1)
 	for idx, r := range cfg.Rules {
-		rule, err := parseRule(r, upstreams)
+		rule, err := d.parseRule(r, upstreams)
 		if err != nil {
 			return nil, fmt.Errorf("parse rule #%d: %w", idx, err)
 		}
@@ -140,7 +142,7 @@ func (d *File) rules(cfg Config, upstreams []discovery.Upstream) ([]*discovery.R
 	}
 
 	if cfg.NotMatched != nil {
-		mock, err := parseRespond(cfg.NotMatched)
+		mock, err := d.parseRespond(cfg.NotMatched)
 		if err != nil {
 			return nil, fmt.Errorf("parse respond: %w", err)
 		}
@@ -163,16 +165,28 @@ func (d *File) upstreams(ctx context.Context, cfg Config) ([]discovery.Upstream,
 			cred = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
 		}
 
-		if u.Addr == "" {
+		tmpl, err := template.New("").
+			Funcs(template.FuncMap{"env": os.Getenv}).
+			Parse(u.Addr)
+		if err != nil {
+			return nil, fmt.Errorf("parse address template for upstream %q: %w", name, err)
+		}
+
+		addr := &strings.Builder{}
+		if err = tmpl.Execute(addr, nil); err != nil {
+			return nil, fmt.Errorf("execute address template for upstream %q: %w", name, err)
+		}
+
+		if addr.String() == "" {
 			return nil, fmt.Errorf("empty address in upstream %q", name)
 		}
 
 		slog.DebugContext(ctx, "dialing upstream",
 			slog.String("upstream", name),
-			slog.String("address", u.Addr),
+			slog.String("address", addr.String()),
 			slog.Bool("tls", u.TLS))
 
-		cc, err := grpc.NewClient(u.Addr,
+		cc, err := grpc.NewClient(addr.String(),
 			grpc.WithTransportCredentials(cred),
 			grpc.WithStreamInterceptor(grpcx.ClientLogInterceptor(slog.Default())),
 		)
@@ -210,7 +224,7 @@ func (d *File) getModifTime(ctx context.Context) (modif time.Time, ok bool) {
 	return fi.ModTime(), true
 }
 
-func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, err error) {
+func (d *File) parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, err error) {
 	if r.Match.URI == "" {
 		return discovery.Rule{}, fmt.Errorf("empty URI in rule")
 	}
@@ -250,7 +264,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 		}
 	}
 
-	if result.Mock, err = parseRespond(r.Respond); err != nil {
+	if result.Mock, err = d.parseRespond(r.Respond); err != nil {
 		return discovery.Rule{}, fmt.Errorf("parse respond: %w", err)
 	}
 
@@ -264,7 +278,7 @@ func parseRule(r Rule, upstreams []discovery.Upstream) (result discovery.Rule, e
 	return result, nil
 }
 
-func parseRespond(r *Respond) (result *discovery.Mock, err error) {
+func (d *File) parseRespond(r *Respond) (result *discovery.Mock, err error) {
 	if r == nil {
 		return nil, nil
 	}

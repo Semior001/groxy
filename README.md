@@ -18,6 +18,7 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
   - [gRPC reflection](#grpc-reflection)
   - [groxypb](#groxypb)
     - [multiline-strings](#multiline-strings)
+    - [templating](#templating)
     - [nested messages](#nested-messages)
     - [enums](#enums)
     - [repeated fields](#repeated-fields)
@@ -137,10 +138,10 @@ The `Respond` section contains the response for the request. The respond section
 
 The `Forward` section contains the upstream to which the request should be forwarded. The forward section may contain the following fields:
 
-| Field    | Required | Description                                                        |
-|----------|----------|--------------------------------------------------------------------|
-| upstream | true     | The name of the upstream to which the request should be forwarded. |
-| header   | optional | The headers to be sent with the request.                           |
+| Field    | Required | Description                                                                                                                                       |
+|----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| upstream | true     | The name of the upstream to which the request should be forwarded. Supports templating: use `env` function to get the environment variable value. |
+| header   | optional | The headers to be sent with the request.                                                                                                          |
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 
@@ -186,6 +187,40 @@ message SomeMessage {
     }`];
 }
 ```
+
+#### templating
+gRoxy supports Go templating in the `groxypb.value` field annotations, allowing dynamic response generation. Templates can access request data and use a variety of built-in functions.
+
+##### template functions
+- **Sprig functions**: All [Sprig template functions](https://masterminds.github.io/sprig/).
+- **Request data access**: Use `.fieldName` to access data from the incoming request
+
+##### examples
+
+```protobuf
+message EnvResponse {
+    option (groxypb.target) = true;
+    string env_value = 1 [(groxypb.value) = "{{env \"API_VERSION\"}}"];
+}
+
+message DynamicResponse {
+    option (groxypb.target) = true;
+    string result = 1 [(groxypb.value) = "Result: {{upper (printf \"num-%d\" (mul .factor 2))}}"];
+}
+```
+
+##### request matching with expressions
+You can use the `groxypb.matcher` option to conditionally match requests based on field values:
+
+```protobuf
+message TestRequest {
+    option (groxypb.target) = true;
+    string type = 1 [(groxypb.value) = "premium"];           // exact match
+    int32 score = 2 [(groxypb.matcher) = "score > 100"];     // conditional match
+}
+```
+
+The matcher uses the [expr](https://github.com/expr-lang/expr) language for evaluations.
 
 #### nested messages
 In case of nested messages, there are two options how to set values:

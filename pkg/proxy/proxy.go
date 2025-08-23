@@ -8,17 +8,18 @@ import (
 	"log/slog"
 	"net"
 
+	"context"
+
 	"github.com/Semior001/groxy/pkg/discovery"
+	"github.com/Semior001/groxy/pkg/grpcx"
 	"github.com/Semior001/groxy/pkg/proxy/middleware"
 	"github.com/cappuccinotm/slogx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-	"github.com/Semior001/groxy/pkg/grpcx"
-	"context"
 	"google.golang.org/grpc/health"
 	healthpb "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 //go:generate moq -out mocks/mocks.go --skip-ensure -pkg mocks . Matcher ServerStream
@@ -150,7 +151,7 @@ func (s *Server) matchMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 		}
 
 		ctx = context.WithValue(ctx, ctxFirstRecv, firstRecv)
-		if match, ok = matches.MatchMessage(firstRecv); !ok {
+		if match, ok = matches.MatchMessage(ctx, firstRecv); !ok {
 			return next(srv, stream)
 		}
 
@@ -185,7 +186,25 @@ func (s *Server) mockMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 		switch {
 		case match.Mock.Body != nil:
-			if err := stream.SendMsg(match.Mock.Body); err != nil {
+			var data map[string]any
+
+			firstRecv := ctx.Value(ctxFirstRecv)
+			if firstRecv != nil && match.Match.Message != nil {
+				dm, err := match.Match.Message.DataMap(ctx, firstRecv.([]byte))
+				if err != nil {
+					slog.WarnContext(ctx, "failed to extract data from the first message", slogx.Error(err))
+					return status.Errorf(codes.Internal, "{groxy} failed to extract data from the first message: %v", err)
+				}
+				data = dm
+			}
+
+			msg, err := match.Mock.Body.Generate(ctx, data)
+			if err != nil {
+				slog.WarnContext(ctx, "failed to generate mock body", slogx.Error(err))
+				return status.Errorf(codes.Internal, "{groxy} failed to generate mock body: %v", err)
+			}
+
+			if err := stream.SendMsg(msg); err != nil {
 				return status.Errorf(codes.Internal, "{groxy} failed to send message: %v", err)
 			}
 		case match.Mock.Status != nil:

@@ -1,7 +1,11 @@
 package protodef
 
 import (
+	"context"
+	"math/rand"
 	"testing"
+
+	"github.com/google/uuid"
 
 	"github.com/Semior001/groxy/pkg/protodef/testdata"
 	"github.com/jhump/protoreflect/desc"
@@ -34,6 +38,7 @@ func Test_builder_parseValue(t *testing.T) {
 		name string
 		fd   fdMock
 		val  string
+		data any
 		want any
 	}{
 		{
@@ -81,6 +86,7 @@ func Test_builder_parseValue(t *testing.T) {
 			val:  `{42: "value"}`,
 			want: map[int32]string{42: "value"},
 		},
+
 		{
 			name: "bytes",
 			fd:   fdMock{typ: descriptorpb.FieldDescriptorProto_TYPE_BYTES},
@@ -90,7 +96,7 @@ func Test_builder_parseValue(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := (&Definer{}).buildValue(tt.fd, tt.val)
+			got, err := buildValue(tt.fd, tt.val)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -115,10 +121,16 @@ func TestBuildMessage(t *testing.T) {
 		gotDyn, err := BuildMessage(def)
 		require.NoError(t, err)
 		got := &testdata.Response{}
-		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, gotDyn), got))
+
+		msg, err := gotDyn.Generate(context.TODO(), nil)
+		require.NoError(t, err)
+
+		require.NoError(t, proto.Unmarshal(mustProtoMarshal(t, msg), got))
 		assert.Truef(t, proto.Equal(want, got),
 			"expected: %v\nactual: %v", want.String(), got.String())
 	})
+
+	uuid.SetRand(rand.New(rand.NewSource(0)))
 
 	tests := []struct {
 		name    string
@@ -210,6 +222,18 @@ func TestBuildMessage(t *testing.T) {
 			}},
 		},
 		{
+			name: "repeated nested message, value in target, templated",
+			def: `	message Nested { string value = 6; }
+					message StubResponse {
+						option (groxypb.target) = true;
+						repeated Nested nested = 10 [(groxypb.value) = '[{"value": "{{uuidv4}}"}, {"value": "{{uuidv4}}"}]'];
+					}`,
+			want: &testdata.Response{Nesteds: []*testdata.Nested{
+				{NestedValue: "0194fdc2-fa2f-4cc0-81d3-ff12045b73c8"},
+				{NestedValue: "6e4ff95f-f662-45ee-a82a-bdf44a2d0b75"},
+			}},
+		},
+		{
 			name: "zero enum, zero map, zero repeated, zero known field",
 			def: `	enum SomeEnum { EMPTY = 0; }
 					message Nested { string value = 6; }
@@ -244,7 +268,9 @@ func TestBuildMessage(t *testing.T) {
 			switch tt.wantErr {
 			case nil:
 				require.NoError(t, err)
-				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, got))
+				msg, err := got.Generate(context.TODO(), nil)
+				require.NoError(t, err)
+				assert.Equal(t, mustProtoMarshal(t, tt.want), mustProtoMarshal(t, msg))
 			default:
 				require.ErrorIs(t, err, tt.wantErr)
 			}

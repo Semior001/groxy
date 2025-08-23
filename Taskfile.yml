@@ -2,6 +2,9 @@
 
 version: '3'
 
+includes:
+  example: { taskfile: _example/Taskfile.yml }
+
 env:
   GO_MODULE: github.com/Semior001/groxy
 
@@ -40,15 +43,24 @@ tasks:
   gen:
     desc: "generate all"
     deps:
-      - gen/annotation
-      - gen/testdata
+      - gen:example
+      - gen:annotation
+      - gen:testdata
 
-  gen/annotation:
+  gen:annotation:
     desc: "generate annotation"
     cmd: |
       protoc --go_out=./groxypb --go_opt=module=$GO_MODULE/groxypb ./groxypb/*.proto
 
-  gen/testdata:
+  gen:example:
+    desc: "generate example"
+    cmd: |
+      protoc \
+        --go_out=./_example --go_opt=module=$GO_MODULE/_example \
+        --go-grpc_out=./_example --go-grpc_opt=module=$GO_MODULE/_example \
+        ./_example/*.proto
+
+  gen:testdata:
     desc: "generate testdata"
     cmd: |
       protoc \
@@ -56,6 +68,6 @@ tasks:
         --go-grpc_out=./pkg/protodef/testdata --go-grpc_opt=module=$GO_MODULE/pkg/protodef/testdata \
         ./pkg/protodef/testdata/*.gen.proto
       protoc \
-        --go_out=./pkg/proxy/grpcx/grpctest --go_opt=module=$GO_MODULE/pkg/proxy/grpcx/grpctest \
-        --go-grpc_out=./pkg/proxy/grpcx/grpctest --go-grpc_opt=module=$GO_MODULE/pkg/proxy/grpcx/grpctest \
-        ./pkg/proxy/grpcx/grpctest/*.proto
+        --go_out=./pkg/grpcx/grpctest --go_opt=module=$GO_MODULE/pkg/grpcx/grpctest \
+        --go-grpc_out=./pkg/grpcx/grpctest --go-grpc_opt=module=$GO_MODULE/pkg/grpcx/grpctest \
+        ./pkg/grpcx/grpctest/*.proto

@@ -12,7 +12,12 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"text/template"
+	"text/template/parse"
 
+	"github.com/expr-lang/expr"
+
+	"github.com/Masterminds/sprig/v3"
 	"github.com/Semior001/groxy/groxypb"
 	"github.com/bufbuild/protocompile/reporter"
 	"github.com/jhump/protoreflect/desc"
@@ -25,13 +30,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var defaultFuncs = sprig.FuncMap()
+
 // Definer parses protobuf snippets and builds protobuf messages
 // according to the specified groxy option values.
-type Definer struct{ loadFromOS bool }
+type Definer struct {
+	loadFromOS bool
+	funcs      template.FuncMap
+}
 
 // NewDefiner returns a new Definer with the given options applied.
 func NewDefiner(opts ...Option) *Definer {
-	d := &Definer{}
+	d := &Definer{funcs: defaultFuncs}
 	for _, opt := range opts {
 		opt(d)
 	}
@@ -40,7 +50,7 @@ func NewDefiner(opts ...Option) *Definer {
 
 // BuildTarget seeks the target message in the given protobuf snippet and
 // returns a proto.Message that can be used to respond requests or match requests to.
-func (b *Definer) BuildTarget(def string) (proto.Message, error) {
+func (b *Definer) BuildTarget(def string) (Template, error) {
 	def, err := b.joinMultilineStrings(def)
 	if err != nil {
 		return nil, fmt.Errorf("invalid file: %w", err)
@@ -58,12 +68,48 @@ func (b *Definer) BuildTarget(def string) (proto.Message, error) {
 		return nil, fmt.Errorf("find target message: %w", err)
 	}
 
-	msg, err := b.buildMessage(target)
+	tmpl, err := b.parseTemplate(target)
 	if err != nil {
-		return nil, fmt.Errorf("parse message: %w", err)
+		return nil, fmt.Errorf("parse template: %w", err)
 	}
 
-	return protoadapt.MessageV2Of(msg), nil
+	return tmpl, nil
+}
+
+func (b *Definer) parseTemplate(target *desc.MessageDescriptor) (Template, error) {
+	msg := &combined{desc: target, static: dynamic.NewMessage(target)}
+	for _, field := range target.GetFields() {
+		val, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Value).(string)
+		tmpl, err := template.New("").Funcs(b.funcs).Parse(val)
+		if err != nil {
+			return nil, fmt.Errorf("parse template for field %q: %w", field.GetName(), err)
+		}
+
+		if isTemplated(tmpl) {
+			msg.dynamic = append(msg.dynamic, templatedField{tmpl: tmpl, desc: field})
+			continue
+		}
+
+		matcher, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Matcher).(string)
+		if matcher != "" {
+			prog, err := expr.Compile(matcher, expr.AsBool(), expr.AllowUndefinedVariables())
+			if err != nil {
+				return nil, fmt.Errorf("compile matcher for field %q: %w", field.GetName(), err)
+			}
+			msg.matchers = append(msg.matchers, matcherField{matcher: prog, desc: field})
+			continue
+		}
+
+		if err = setField(msg.static, field, val); err != nil {
+			return nil, fmt.Errorf("set static field %q: %w", field.GetName(), err)
+		}
+	}
+
+	if len(msg.dynamic) == 0 && len(msg.matchers) == 0 {
+		return &static{desc: target.UnwrapMessage(), msg: protoadapt.MessageV2Of(msg.static)}, nil
+	}
+
+	return msg, nil
 }
 
 // joinMultilineStrings replaces the multiline strings enclosed in "`" symbol into
@@ -191,19 +237,19 @@ func (b *Definer) findTarget(fd *desc.FileDescriptor) (*desc.MessageDescriptor, 
 	}
 }
 
-func (b *Definer) buildMessage(target *desc.MessageDescriptor) (*dynamic.Message, error) {
+func buildMessage(target *desc.MessageDescriptor) (*dynamic.Message, error) {
 	msg := dynamic.NewMessage(target)
 	for _, field := range target.GetFields() {
-		if err := b.setField(msg, field); err != nil {
+		val, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Value).(string)
+		if err := setField(msg, field, val); err != nil {
 			return nil, fmt.Errorf("set field %q: %w", field.GetName(), err)
 		}
 	}
 	return msg, nil
 }
 
-func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor) error {
-	val, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Value).(string)
-	v, err := b.buildValue(fieldDescriptorWrapper{FieldDescriptor: field}, val)
+func setField(msg *dynamic.Message, field *desc.FieldDescriptor, val string) error {
+	v, err := buildValue(fieldDescriptorWrapper{FieldDescriptor: field}, val)
 	if err != nil {
 		return fmt.Errorf("parse value: %w", err)
 	}
@@ -215,15 +261,15 @@ func (b *Definer) setField(msg *dynamic.Message, field *desc.FieldDescriptor) er
 	return nil
 }
 
-func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
+func buildValue(field fieldDescriptor, s string) (any, error) {
 	if s == "" {
 		switch {
 		case field.IsMap():
-			return b.buildMap(field, "{}")
+			return buildMap(field, "{}")
 		case field.IsRepeated():
-			return b.buildRepeated(field, "[]")
+			return buildRepeated(field, "[]")
 		case isMsg(field.GetType()): // repeated and map is just a repeated message
-			return b.buildMessage(field.GetMessageType())
+			return buildMessage(field.GetMessageType())
 		case isEnum(field.GetType()):
 			return int32(0), nil
 		default:
@@ -237,9 +283,9 @@ func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
 
 	switch {
 	case field.IsMap():
-		return b.buildMap(field, s)
+		return buildMap(field, s)
 	case field.IsRepeated():
-		return b.buildRepeated(field, s)
+		return buildRepeated(field, s)
 	default:
 		parser, ok := parsers[field.GetType()]
 		if !ok {
@@ -255,7 +301,7 @@ func (b *Definer) buildValue(field fieldDescriptor, s string) (any, error) {
 	}
 }
 
-func (b *Definer) buildMap(field fieldDescriptor, s string) (any, error) {
+func buildMap(field fieldDescriptor, s string) (any, error) {
 	kDescTyp, vDescTyp := field.GetMapKeyType().GetType(), field.GetMapValueType().GetType()
 
 	kTyp, ok := types[kDescTyp]
@@ -314,7 +360,7 @@ func (b *Definer) buildMap(field fieldDescriptor, s string) (any, error) {
 	return result, nil
 }
 
-func (b *Definer) buildRepeated(field fieldDescriptor, s string) (any, error) {
+func buildRepeated(field fieldDescriptor, s string) (any, error) {
 	vTyp, ok := types[field.GetType()]
 	if !ok && field.GetType() != descriptorpb.FieldDescriptorProto_TYPE_MESSAGE {
 		return nil, fmt.Errorf("unknown repeated value type: %s", field.GetType())
@@ -466,4 +512,35 @@ func (f fieldDescriptorWrapper) GetMapKeyType() fieldDescriptor {
 
 func (f fieldDescriptorWrapper) GetMapValueType() fieldDescriptor {
 	return fieldDescriptorWrapper{FieldDescriptor: f.FieldDescriptor.GetMapValueType()}
+}
+
+func isTemplated(tmpl *template.Template) bool {
+	if tmpl == nil {
+		return false
+	}
+
+	var hasNonTextNodes func(node parse.Node) bool
+	hasNonTextNodes = func(node parse.Node) bool {
+		switch n := node.(type) {
+		case *parse.ListNode:
+			for _, child := range n.Nodes {
+				if hasNonTextNodes(child) {
+					return true
+				}
+			}
+			return false
+		case *parse.TextNode:
+			return false
+		default:
+			return true
+		}
+	}
+
+	for _, t := range tmpl.Templates() {
+		if t.Root != nil && hasNonTextNodes(t.Root) {
+			return true
+		}
+	}
+
+	return false
 }

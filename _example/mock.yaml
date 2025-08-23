@@ -6,18 +6,13 @@ not-matched:
 
 # defines the list of upstreams to be referenced further in the rules.
 upstreams:
-  example-1:
-    address: "localhost:50051" # the address of the upstream service
-    tls: false                 # if true, groxy will use a secure connection
-    serve-reflection: true     # if true, groxy will include responses to the reflection service
-
-  example-2:
-    address: "localhost:50052"
-    tls: false
-    serve-reflection: true
+  echo:
+    address: "grpc-echo.semior.dev:443" # the address of the upstream service
+    tls: true                           # if true, groxy will use a secure connection
+    serve-reflection: true              # if true, groxy will include responses to the reflection service
 
 rules:
-    # The next rule will respond with a predefined message.
+    # The next rule will respond with a predefined message on the request with header "test: true".
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
       header: { test: true }
@@ -35,7 +30,40 @@ rules:
             int32 code     = 2 [(groxypb.value)  = "200"];
         }
 
-    # The next rule will respond with a predefined message.
+    # The next rule is almost the same as the previous one, but the response is templated:
+    # random UUID will be provided in the response message.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "random"];
+        }
+    respond:
+      body: |
+        message StubResponse { 
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "{{uuidv4}}"];
+        }
+
+    # The next rule is almost the same as the previous one, but the response is templated:
+    # the value provided in the request will be multiplied by 2 and returned in the response.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true; 
+            string message = 1   [(groxypb.value)   = "matcher"];
+            int32 multiplier = 2 [(groxypb.matcher) = "multiplier > 0"];
+        }
+    respond:
+      body: |
+        message StubResponse { 
+            option (groxypb.target) = true; 
+            string message = 1 [(groxypb.value)  = "{{mul .multiplier 2}}"];
+        }
+
+    # The next rule will respond with a predefined message on any request that matches URI and request body.
   - match:
       uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
       body: |
@@ -82,9 +110,9 @@ rules:
         trailer: { Powered-By:   "groxy" }
 
     # The next rule will forward the request to the specified upstream.
-  - match: { uri: "com.github.Semior001.groxy.example.mock.Upstream/Get" }
+  - match: { uri: "grpc_echo.v1.EchoService/Echo" }
     forward:
-      upstream: example-1
+      upstream: echo
       header:
         X-Request-Id: "123"
 

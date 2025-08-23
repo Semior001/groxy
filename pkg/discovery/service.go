@@ -6,13 +6,12 @@ import (
 	"sort"
 	"sync"
 
+	"errors"
+	"fmt"
+
 	"github.com/cappuccinotm/slogx"
 	"github.com/samber/lo"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/proto"
-	"bytes"
-	"fmt"
-	"errors"
 )
 
 //go:generate moq -out mock_provider.go -fmt goimports . Provider
@@ -150,7 +149,7 @@ func (m Matches) NeedsDeeperMatch() bool {
 
 // MatchMessage matches the given gRPC request to a rule.
 // It returns the first match and true if the request is matched.
-func (m Matches) MatchMessage(bts []byte) (*Rule, bool) {
+func (m Matches) MatchMessage(ctx context.Context, bts []byte) (*Rule, bool) {
 	for _, rule := range m {
 		// matches are sorted by presence of the message,
 		// if any previous rule hasn't matched, then we consider
@@ -159,13 +158,14 @@ func (m Matches) MatchMessage(bts []byte) (*Rule, bool) {
 			return rule, true
 		}
 
-		// we consider messages equal if their wire-encoded bytes are equal
-		expectedBts, err := proto.Marshal(rule.Match.Message)
+		match, err := rule.Match.Message.Matches(ctx, bts)
 		if err != nil {
+			slog.WarnContext(ctx, "failed to match message against a rule",
+				slog.String("rule", rule.Name), slogx.Error(err))
 			continue
 		}
 
-		if bytes.Equal(bts, expectedBts) {
+		if match {
 			return rule, true
 		}
 	}

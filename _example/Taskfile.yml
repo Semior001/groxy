@@ -1,0 +1,81 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  server:
+    desc: start the example server
+    summary: |
+      starts the example server on port 8080, requires the upstream service to be running
+    cmd: |
+      go run -ldflags "-X 'main.version=local'" ./cmd/groxy \
+        --file.name='_example/mock.yaml' --signature --debug --reflection \
+        {{.CLI_ARGS}}
+
+  stub-with-header:
+    desc: >-
+      make a request to stub method with header 'test: true', see summary for details
+    summary: |
+      response will be: {"message": "needed value received","code": 200}
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        -H 'test: true' \
+        -d '{"message":"needed value"}' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
+
+  stub-without-body:
+    desc: make a request to stub method without header, see summary for details
+    summary: |
+        response will be: {"message": "lol that works","code": 400}
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        -d '{"message":"needed value"}' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
+
+  stub-random-uuid:
+    desc: make a request to the service and get a random UUID
+    summary: |
+      response will be: {"message": "<some random UUID>"}
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        -d '{"message":"random"}' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
+
+  stub-matcher:
+    desc: make a request to the service with a value matcher, see summary for details
+    summary: |
+      response will be: {"message": "10"}
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        -d '{"message":"matcher","multiplier":5}' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
+
+  stub-generic:
+    desc: make a request to the service without any header or body, see summary for details
+    summary: |
+      response will be: {"dependency": {"value": "some value"}}
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
+
+  error:
+    desc: make a request to a method that always returns an error
+    summary: |
+      status will be INVALID_ARGUMENT, response headers will contain "X-Request-Id: 123" and trailers 
+      will contain "Powered-By: groxy"
+    cmd: |
+      grpcurl -v -plaintext -proto '_example/service.proto' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Error
+
+  upstream:
+    desc: make a request that will be passed to the upstream service, requires the upstream service to be running
+    cmd: |
+      grpcurl -plaintext -use-reflection \
+        {{.CLI_ARGS}} \
+        localhost:8080 grpc_echo.v1.EchoService/Echo
