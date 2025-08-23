@@ -133,7 +133,7 @@ func TestMain_Examples(t *testing.T) {
 				require.True(t, ok)
 				assert.Equalf(t, "hello", echoResp.Body,
 					"unexpected echo response: %s", echoResp.Body)
-				assert.Equal(t, "12345", echoResp.Headers["X-Request-Id"])
+				assert.Equal(t, "12345", echoResp.Headers["x-request-id"])
 			},
 		},
 	}

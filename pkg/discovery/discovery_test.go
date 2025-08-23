@@ -19,10 +19,10 @@ func TestRule_String(t *testing.T) {
 				"key":  regexp.MustCompile("value"),
 				"key2": regexp.MustCompile("value2"),
 			},
-			Message: protodef.Static{Message: &errdetails.RequestInfo{
+			Message: protodef.Static(&errdetails.RequestInfo{
 				RequestId:   "request-id",
 				ServingData: "serving-data",
-			}},
+			}),
 		},
 	}).String()
 

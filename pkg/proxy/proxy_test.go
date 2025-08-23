@@ -57,7 +57,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with status)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: protodef.Static{Message: &grpctest.StreamRequest{Value: "error"}},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "error"}),
 					},
 					Mock: &discovery.Mock{
 						Status: status.New(codes.Internal, "test"),
@@ -67,7 +67,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with metadata)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: protodef.Static{Message: &grpctest.StreamRequest{Value: "metadata"}},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "metadata"}),
 					},
 					Mock: &discovery.Mock{
 						Header: metadata.Pairs("test", "test"),
@@ -78,7 +78,7 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (forward to backend)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: protodef.Static{Message: &grpctest.StreamRequest{Value: "forward"}},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "forward"}),
 					},
 					Forward: &discovery.Forward{Upstream: discovery.ClientConn{
 						ConnName:        "backend",
@@ -90,10 +90,10 @@ func TestServer_handle(t *testing.T) {
 					Name: "groxy.testdata.ExampleService/Unary (mock with response)",
 					Match: discovery.RequestMatcher{
 						URI:     regexp.MustCompile("groxy.testdata.ExampleService/Unary"),
-						Message: protodef.Static{Message: &grpctest.StreamRequest{Value: "response"}},
+						Message: protodef.Static(&grpctest.StreamRequest{Value: "response"}),
 					},
 					Mock: &discovery.Mock{
-						Body: protodef.Static{Message: &grpctest.StreamResponse{Value: "test"}},
+						Body: protodef.Static(&grpctest.StreamResponse{Value: "test"}),
 					},
 				},
 				{

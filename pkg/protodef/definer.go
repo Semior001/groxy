@@ -106,7 +106,7 @@ func (b *Definer) parseTemplate(target *desc.MessageDescriptor) (Template, error
 	}
 
 	if len(msg.dynamic) == 0 && len(msg.matchers) == 0 {
-		return &Static{Desc: target.UnwrapMessage(), Message: protoadapt.MessageV2Of(msg.static)}, nil
+		return &static{desc: target.UnwrapMessage(), msg: protoadapt.MessageV2Of(msg.static)}, nil
 	}
 
 	return msg, nil

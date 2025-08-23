@@ -3,14 +3,15 @@
 package grpcx
 
 import (
-	"google.golang.org/grpc"
-	"fmt"
-	"golang.org/x/sync/errgroup"
-	"google.golang.org/grpc/status"
-	"errors"
-	"google.golang.org/grpc/codes"
-	"io"
 	"context"
+	"errors"
+	"fmt"
+	"io"
+
+	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // Direction describes the direction of the message.
@@ -38,14 +39,22 @@ type Message struct {
 func Pipe(server grpc.ClientStream, client grpc.ServerStream) error {
 	ewg := &errgroup.Group{}
 	ewg.Go(func() error {
+		messageSent := false
 		for {
 			var msg []byte
 			if err := server.RecvMsg(&msg); err != nil {
+				// some servers (e.g. ones behind cloudflare) don't fully comply with gRPC spec and
+				// can improperly close the stream without sending trailers, treat this as successful
+				// completion if at least one message has been sent
+				if isImproperCloseError(err) && messageSent {
+					return nil
+				}
 				return fmt.Errorf("receive message from server stream: %w", err)
 			}
 			if err := client.SendMsg(msg); err != nil {
 				return fmt.Errorf("send message to client stream: %w", err)
 			}
+			messageSent = true
 		}
 	})
 	ewg.Go(func() error {
@@ -114,3 +123,14 @@ type contextedStream struct {
 }
 
 func (s contextedStream) Context() context.Context { return s.ctx }
+
+func isImproperCloseError(err error) bool {
+	if err == nil {
+		return false
+	}
+	st := StatusFromError(err)
+	if st == nil {
+		return false
+	}
+	return st.Code() == codes.Internal && st.Message() == "server closed the stream without sending trailers"
+}

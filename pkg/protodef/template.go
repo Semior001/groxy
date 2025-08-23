@@ -141,14 +141,18 @@ func (t *combined) Generate(ctx context.Context, data map[string]any) (proto.Mes
 }
 
 // Static is a Template that returns a static protobuf message without any modifications.
-type Static struct {
-	Desc    protoreflect.MessageDescriptor
-	Message proto.Message
+func Static(msg proto.Message) Template {
+	return static{desc: msg.ProtoReflect().Descriptor(), msg: msg}
+}
+
+type static struct {
+	desc protoreflect.MessageDescriptor
+	msg  proto.Message
 }
 
 // DataMap returns a map of values, parsed from the provided byte sequence.
-func (s Static) DataMap(_ context.Context, bts []byte) (map[string]any, error) {
-	d, err := desc.WrapMessage(s.Desc)
+func (s static) DataMap(_ context.Context, bts []byte) (map[string]any, error) {
+	d, err := desc.WrapMessage(s.desc)
 	if err != nil {
 		return nil, fmt.Errorf("wrap static message descriptor: %w", err)
 	}
@@ -167,8 +171,8 @@ func (s Static) DataMap(_ context.Context, bts []byte) (map[string]any, error) {
 }
 
 // Matches matches the byte sequence against the static message.
-func (s Static) Matches(_ context.Context, got []byte) (bool, error) {
-	want, err := proto.Marshal(s.Message)
+func (s static) Matches(_ context.Context, got []byte) (bool, error) {
+	want, err := proto.Marshal(s.msg)
 	if err != nil {
 		return false, fmt.Errorf("marshal static message: %w", err)
 	}
@@ -177,6 +181,6 @@ func (s Static) Matches(_ context.Context, got []byte) (bool, error) {
 }
 
 // Generate returns the static message without any modifications.
-func (s Static) Generate(context.Context, map[string]any) (proto.Message, error) {
-	return s.Message, nil
+func (s static) Generate(context.Context, map[string]any) (proto.Message, error) {
+	return s.msg, nil
 }

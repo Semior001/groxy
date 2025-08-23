@@ -1,3 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(go test:*)",
+      "Bash(grpcurl:*)",
+      "Bash(go doc:*)",
+      "Bash(go run:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)"
+    ]
+  },
   "enableAllProjectMcpServers": false
 }
