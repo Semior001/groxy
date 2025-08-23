@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             v4.24.4
-// source: pkg/proxy/grpcx/grpctest/stream.proto
+// source: pkg/grpcx/grpctest/stream.proto
 
 package grpctest
 
@@ -310,7 +310,7 @@ var ExampleService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "pkg/proxy/grpcx/grpctest/stream.proto",
+	Metadata: "pkg/grpcx/grpctest/stream.proto",
 }
 
 const (
@@ -605,5 +605,5 @@ var OtherExampleService_ServiceDesc = grpc.ServiceDesc{
 			ClientStreams: true,
 		},
 	},
-	Metadata: "pkg/proxy/grpcx/grpctest/stream.proto",
+	Metadata: "pkg/grpcx/grpctest/stream.proto",
 }
