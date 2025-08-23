@@ -3,6 +3,7 @@ package fileprovider
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"html/template"
 	"log/slog"
@@ -11,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	"crypto/tls"
 	"sort"
 
 	"github.com/Semior001/groxy/pkg/discovery"

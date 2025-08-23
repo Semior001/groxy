@@ -47,7 +47,7 @@ tasks:
   stub-matcher:
     desc: make a request to the service with a value matcher, see summary for details
     summary: |
-      response will be: {"result": "10"}
+      response will be: {"message": "10"}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
         -d '{"message":"matcher","multiplier":5}' \
@@ -76,7 +76,6 @@ tasks:
   upstream:
     desc: make a request that will be passed to the upstream service, requires the upstream service to be running
     cmd: |
-      grpcurl \
-        -plaintext -proto '_example/service.proto' \
+      grpcurl -plaintext -use-reflection \
         {{.CLI_ARGS}} \
-        localhost:8080 com.github.Semior001.groxy.example.mock.Upstream/Get
+        localhost:8080 grpc_echo.v1.EchoService/Echo

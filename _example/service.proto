@@ -4,20 +4,20 @@ package com.github.Semior001.groxy.example.mock;
 
 import "google/protobuf/empty.proto";
 
+option go_package = "github.com/Semior001/groxy/_example;_example";
+
 service ExampleService {
   rpc Stub(StubRequest) returns (SomeOtherResponse);
   rpc Error(google.protobuf.Empty) returns (google.protobuf.Empty);
   rpc NotFound(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
-service Upstream {
-  rpc Get(google.protobuf.Empty) returns (google.protobuf.Empty);
-}
-
 message Dependency {
   string first = 1;
   string second = 2;
   string value = 6;
+  bool flag = 7;
+  string rich_text = 8;
 
   reserved 3, 4, 5;
 }

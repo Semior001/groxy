@@ -13,13 +13,14 @@ import (
 	"github.com/jhump/protoreflect/dynamic"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/protoadapt"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Template is an interface for generating protobuf messages based on templates.
 type Template interface {
 	DataMap(ctx context.Context, bts []byte) (map[string]any, error)
 	Matches(ctx context.Context, bts []byte) (bool, error)
-	Generate(ctx context.Context, data any) (proto.Message, error)
+	Generate(ctx context.Context, data map[string]any) (proto.Message, error)
 }
 
 type templatedField struct {
@@ -70,7 +71,7 @@ func (t *combined) Matches(ctx context.Context, bts []byte) (bool, error) {
 
 	for _, field := range t.matchers {
 		val := got.GetField(field.desc)
-		env := map[string]any{"val": val, "ctx": ctx}
+		env := map[string]any{field.desc.GetName(): val, "ctx": ctx}
 
 		out, err := expr.Run(field.matcher, env)
 		if err != nil {
@@ -115,7 +116,7 @@ func (t *combined) getStaticPart(bts []byte) (*dynamic.Message, error) {
 }
 
 // Generate builds a new protobuf message out of a template and the provided data.
-func (t *combined) Generate(ctx context.Context, data any) (proto.Message, error) {
+func (t *combined) Generate(ctx context.Context, data map[string]any) (proto.Message, error) {
 	msg := dynamic.NewMessage(t.desc)
 	if err := msg.MergeFrom(t.static); err != nil {
 		return nil, fmt.Errorf("clone static fields into the new message: %w", err)
@@ -123,12 +124,9 @@ func (t *combined) Generate(ctx context.Context, data any) (proto.Message, error
 	for _, field := range t.dynamic {
 		sb := &strings.Builder{}
 
-		input := struct {
-			Ctx  context.Context
-			Data any
-		}{
-			Ctx:  ctx,
-			Data: data,
+		input := map[string]any{"Context": ctx}
+		for k, v := range data {
+			input[k] = v
 		}
 
 		if err := field.tmpl.Execute(sb, input); err != nil {
@@ -143,11 +141,14 @@ func (t *combined) Generate(ctx context.Context, data any) (proto.Message, error
 }
 
 // Static is a Template that returns a static protobuf message without any modifications.
-type Static struct{ proto.Message }
+type Static struct {
+	Desc    protoreflect.MessageDescriptor
+	Message proto.Message
+}
 
 // DataMap returns a map of values, parsed from the provided byte sequence.
 func (s Static) DataMap(_ context.Context, bts []byte) (map[string]any, error) {
-	d, err := desc.WrapMessage(s.Message.ProtoReflect().Descriptor())
+	d, err := desc.WrapMessage(s.Desc)
 	if err != nil {
 		return nil, fmt.Errorf("wrap static message descriptor: %w", err)
 	}
@@ -176,6 +177,6 @@ func (s Static) Matches(_ context.Context, got []byte) (bool, error) {
 }
 
 // Generate returns the static message without any modifications.
-func (s Static) Generate(context.Context, any) (proto.Message, error) {
+func (s Static) Generate(context.Context, map[string]any) (proto.Message, error) {
 	return s.Message, nil
 }

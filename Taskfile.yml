@@ -43,6 +43,7 @@ tasks:
   gen:
     desc: "generate all"
     deps:
+      - gen:example
       - gen:annotation
       - gen:testdata
 
@@ -50,6 +51,14 @@ tasks:
     desc: "generate annotation"
     cmd: |
       protoc --go_out=./groxypb --go_opt=module=$GO_MODULE/groxypb ./groxypb/*.proto
+
+  gen:example:
+    desc: "generate example"
+    cmd: |
+      protoc \
+        --go_out=./_example --go_opt=module=$GO_MODULE/_example \
+        --go-grpc_out=./_example --go-grpc_opt=module=$GO_MODULE/_example \
+        ./_example/*.proto
 
   gen:testdata:
     desc: "generate testdata"
