@@ -98,7 +98,12 @@ Field is backward compatible if it's of the same type and the same number. Names
 
 
 ### configuration
-gRoxy uses a YAML configuration file to define the rules for the gRPC mocking server. The configuration file consists of the following sections:
+gRoxy uses a YAML configuration file to define the rules for the gRPC mocking server. 
+
+The sections of the configuration file are in the collapsed section below:
+
+<details>
+<summary>Configuration file sections</summary>
 
 | Section     | Description                                                                                                                                                                                          |
 |-------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -142,6 +147,8 @@ The `Forward` section contains the upstream to which the request should be forwa
 |----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------|
 | upstream | true     | The name of the upstream to which the request should be forwarded. Supports templating: use `env` function to get the environment variable value. |
 | header   | optional | The headers to be sent with the request.                                                                                                          |
+
+</details>
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 
