@@ -116,7 +116,7 @@ func TestMain_Examples(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, codes.InvalidArgument, st.Code())
 				assert.Equal(t, "invalid request", st.Message())
-				require.Len(t, st.Details(), 0)
+				require.Empty(t, st.Details())
 				assert.Equal(t, []string{"123"}, headers.Get("X-Request-Id"))
 				assert.Equal(t, []string{"groxy"}, trailers.Get("Powered-By"))
 			},
