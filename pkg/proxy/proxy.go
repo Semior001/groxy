@@ -186,7 +186,19 @@ func (s *Server) mockMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 		switch {
 		case match.Mock.Body != nil:
-			msg, err := match.Mock.Body.Generate(ctx, nil)
+			var data map[string]any
+
+			firstRecv := ctx.Value(ctxFirstRecv)
+			if firstRecv != nil && match.Match.Message != nil {
+				dm, err := match.Match.Message.DataMap(ctx, firstRecv.([]byte))
+				if err != nil {
+					slog.WarnContext(ctx, "failed to extract data from the first message", slogx.Error(err))
+					return status.Errorf(codes.Internal, "{groxy} failed to extract data from the first message: %v", err)
+				}
+				data = dm
+			}
+
+			msg, err := match.Mock.Body.Generate(ctx, data)
 			if err != nil {
 				slog.WarnContext(ctx, "failed to generate mock body", slogx.Error(err))
 				return status.Errorf(codes.Internal, "{groxy} failed to generate mock body: %v", err)

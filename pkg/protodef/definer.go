@@ -15,8 +15,9 @@ import (
 	"text/template"
 	"text/template/parse"
 
-	"github.com/google/uuid"
+	"github.com/expr-lang/expr"
 
+	"github.com/Masterminds/sprig/v3"
 	"github.com/Semior001/groxy/groxypb"
 	"github.com/bufbuild/protocompile/reporter"
 	"github.com/jhump/protoreflect/desc"
@@ -29,7 +30,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var defaultFuncs = template.FuncMap{"uuid": uuid.NewString}
+var defaultFuncs = sprig.FuncMap()
 
 // Definer parses protobuf snippets and builds protobuf messages
 // according to the specified groxy option values.
@@ -89,13 +90,25 @@ func (b *Definer) parseTemplate(target *desc.MessageDescriptor) (Template, error
 			continue
 		}
 
+		matcher, _ := proto.GetExtension(protoadapt.MessageV2Of(field.GetOptions()), groxypb.E_Matcher).(string)
+		if matcher != "" {
+			prog, err := expr.Compile(matcher, expr.AsBool(), expr.AllowUndefinedVariables())
+			if err != nil {
+				return nil, fmt.Errorf("compile matcher for field %q: %w", field.GetName(), err)
+			}
+			msg.matchers = append(msg.matchers, matcherField{matcher: prog, desc: field})
+			continue
+		}
+
 		if err = setField(msg.static, field, val); err != nil {
 			return nil, fmt.Errorf("set static field %q: %w", field.GetName(), err)
 		}
 	}
-	if len(msg.dynamic) == 0 {
+
+	if len(msg.dynamic) == 0 && len(msg.matchers) == 0 {
 		return &Static{Message: protoadapt.MessageV2Of(msg.static)}, nil
 	}
+
 	return msg, nil
 }
 

@@ -6,14 +6,12 @@ import (
 	"sort"
 	"sync"
 
-	"bytes"
 	"errors"
 	"fmt"
 
 	"github.com/cappuccinotm/slogx"
 	"github.com/samber/lo"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/protobuf/proto"
 )
 
 //go:generate moq -out mock_provider.go -fmt goimports . Provider
@@ -160,20 +158,14 @@ func (m Matches) MatchMessage(ctx context.Context, bts []byte) (*Rule, bool) {
 			return rule, true
 		}
 
-		msg, err := rule.Match.Message.Generate(ctx, nil)
+		match, err := rule.Match.Message.Matches(ctx, bts)
 		if err != nil {
-			slog.WarnContext(ctx, "failed to generate message from template",
+			slog.WarnContext(ctx, "failed to match message against a rule",
 				slog.String("rule", rule.Name), slogx.Error(err))
 			continue
 		}
 
-		// we consider messages equal if their wire-encoded bytes are equal
-		expectedBts, err := proto.Marshal(msg)
-		if err != nil {
-			continue
-		}
-
-		if bytes.Equal(bts, expectedBts) {
+		if match {
 			return rule, true
 		}
 	}

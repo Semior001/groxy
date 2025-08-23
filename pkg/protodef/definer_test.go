@@ -226,7 +226,7 @@ func TestBuildMessage(t *testing.T) {
 			def: `	message Nested { string value = 6; }
 					message StubResponse {
 						option (groxypb.target) = true;
-						repeated Nested nested = 10 [(groxypb.value) = '[{"value": "{{uuid}}"}, {"value": "{{uuid}}"}]'];
+						repeated Nested nested = 10 [(groxypb.value) = '[{"value": "{{uuidv4}}"}, {"value": "{{uuidv4}}"}]'];
 					}`,
 			want: &testdata.Response{Nesteds: []*testdata.Nested{
 				{NestedValue: "0194fdc2-fa2f-4cc0-81d3-ff12045b73c8"},

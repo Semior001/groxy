@@ -24,6 +24,7 @@ message Dependency {
 
 message StubRequest {
   string message = 1;
+  int32 multiplier = 2;
 }
 
 message SomeOtherResponse {
