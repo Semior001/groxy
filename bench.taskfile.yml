@@ -1,0 +1,73 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  default:
+    desc: "run benchmarks with ghz"
+    deps:
+      - mocker
+      - reverse-proxy
+      - templater
+      - request-matcher
+      - complex-request-matcher
+
+  server:
+    desc: "run grpc-echo server for manual tests"
+    cmds:
+      - cmd: docker run -d --rm -p 8081:8080 semior/grpc-echo:latest
+      - defer: docker stop $(docker ps -q --filter ancestor=semior/grpc-echo:latest)
+      - go run -ldflags "-X 'main.version=local'" ./cmd/groxy --reflection --file.name="_example/benchmark.yaml" {{.CLI_ARGS}}
+
+  mocker:
+    desc: "run benchmarks for the mocking functionality"
+    vars:
+      HOST: "localhost:8080"
+      COUNT: "10000"
+    cmd: |
+      ghz --insecure \
+        --metadata '{"test": "mocker"}' \
+        --call 'grpc_echo/v1/EchoService/Echo' \
+        -d '{"ping": "mocker"}' -c 1 --total {{.COUNT}} {{.HOST}}
+
+  reverse-proxy:
+    desc: "run benchmarks for reverse proxy functionality"
+    vars:
+      HOST: "localhost:8080"
+      COUNT: "10000"
+    cmd: |
+      ghz --insecure \
+        --metadata '{"test": "reverse-proxy"}' \
+        --call 'grpc_echo/v1/EchoService/Echo' \
+        -d '{"ping": "reverse-proxy"}' -c 1 --total {{.COUNT}} {{.HOST}}
+
+  templater:
+    desc: "run benchmarks for templated response functionality"
+    vars:
+      HOST: "localhost:8080"
+      COUNT: "10000"
+    cmd: |
+      ghz --insecure \
+        --metadata '{"test": "templated"}' \
+        --call 'grpc_echo/v1/EchoService/Echo' \
+        -d '{"ping": "templated"}' -c 1 --total {{.COUNT}} {{.HOST}}
+
+  request-matcher:
+    desc: "run benchmarks for request body matching functionality"
+    vars:
+      HOST: "localhost:8080"
+      COUNT: "10000"
+    cmd: |
+      ghz --insecure \
+        --call 'grpc_echo/v1/EchoService/Echo' \
+        -d '{"ping": "request-matcher"}' -c 1 --total {{.COUNT}} {{.HOST}}
+
+  complex-request-matcher:
+    desc: "run benchmarks for request body matching functionality"
+    vars:
+      HOST: "localhost:8080"
+      COUNT: "10000"
+    cmd: |
+      ghz --insecure \
+        --call 'grpc_echo/v1/EchoService/Echo' \
+        -d '{"ping": "complex-request-matcher"}' -c 1 --total {{.COUNT}} {{.HOST}}
