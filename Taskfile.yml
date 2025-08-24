@@ -137,8 +137,8 @@ tasks:
     desc: "generate example"
     cmd: |
       protoc \
-        --go_out=./_example --go_opt=module=$GO_MODULE/_example \
-        --go-grpc_out=./_example --go-grpc_opt=module=$GO_MODULE/_example \
+        --go_out=./_example/gen      --go_opt=module=$GO_MODULE/_example/gen \
+        --go-grpc_out=./_example/gen --go-grpc_opt=module=$GO_MODULE/_example/gen \
         ./_example/*.proto
 
   gen:testdata:

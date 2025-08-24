@@ -1,4 +1,4 @@
-// Package _example provides the embedded example configuration file.
+// Package _example embeds the example groxy configuration.
 package _example
 
 import _ "embed"
