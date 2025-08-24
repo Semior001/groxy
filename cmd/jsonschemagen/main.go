@@ -37,7 +37,7 @@ func main() {
 		log.Fatalf("failed to marshal schema: %v", err)
 	}
 
-	if err = os.WriteFile(opts.Output, bts, 0o644); err != nil {
+	if err = os.WriteFile(opts.Output, bts, 0o644); err != nil { //nolint:gosec // it's ok to write file in repo
 		log.Fatalf("failed to write schema to file: %v", err)
 	}
 
