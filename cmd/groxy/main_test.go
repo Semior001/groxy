@@ -47,6 +47,15 @@ func TestMain_Examples(t *testing.T) {
 		}
 	}
 
+	t.Run("stub-matcher", func(t *testing.T) {
+		c := examplepb.NewExampleServiceClient(conn)
+		started := time.Now()
+		resp, err := c.Stub(t.Context(), &examplepb.StubRequest{Message: "matcher", Multiplier: 5})
+		require.NoError(t, err)
+		assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{Message: "10"}, resp), "unexpected response: %v", resp)
+		assert.GreaterOrEqual(t, time.Since(started), 2*time.Second)
+	})
+
 	tests := []struct {
 		name    string
 		method  string
@@ -87,13 +96,6 @@ func TestMain_Examples(t *testing.T) {
 				_, err = uuid.Parse(resp.Message)
 				assert.NoError(t, err, "response message is not a valid UUID: %s", resp.Message)
 			},
-		},
-		{
-			name:    "stub-matcher",
-			method:  examplepb.ExampleService_Stub_FullMethodName,
-			input:   &examplepb.StubRequest{Message: "matcher", Multiplier: 5},
-			wantTyp: &examplepb.SomeOtherResponse{},
-			want:    protomsg(&examplepb.SomeOtherResponse{Message: "10"}),
 		},
 		{
 			name:    "stub-generic",

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"time"
 
 	"context"
 
@@ -174,6 +175,18 @@ func (s *Server) mockMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 			return next(srv, stream)
 		}
 
+		if match.Mock.Wait > 0 {
+			slog.DebugContext(ctx, "waiting before responding", slog.Any("wait", match.Mock.Wait))
+			select {
+			case <-ctx.Done():
+				slog.WarnContext(ctx, "context done while waiting",
+					slog.Any("wait", match.Mock.Wait),
+					slogx.Error(ctx.Err()))
+				return status.Error(codes.Canceled, "{groxy} context done while waiting")
+			case <-time.After(match.Mock.Wait):
+			}
+		}
+
 		if len(match.Mock.Header) > 0 {
 			if err := stream.SetHeader(match.Mock.Header); err != nil {
 				slog.WarnContext(ctx, "failed to set header to the client", slogx.Error(err))
@@ -204,7 +217,7 @@ func (s *Server) mockMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 				return status.Errorf(codes.Internal, "{groxy} failed to generate mock body: %v", err)
 			}
 
-			if err := stream.SendMsg(msg); err != nil {
+			if err = stream.SendMsg(msg); err != nil {
 				return status.Errorf(codes.Internal, "{groxy} failed to send message: %v", err)
 			}
 		case match.Mock.Status != nil:

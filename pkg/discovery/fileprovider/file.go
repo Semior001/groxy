@@ -290,6 +290,12 @@ func (d *File) parseRespond(r *Respond) (result *discovery.Mock, err error) {
 		result.Trailer = metadata.New(r.Metadata.Trailer)
 	}
 
+	if r.Wait != nil {
+		if result.Wait, err = time.ParseDuration(*r.Wait); err != nil {
+			return nil, fmt.Errorf("parse wait duration: %w", err)
+		}
+	}
+
 	switch {
 	case r.Status != nil && r.Body != nil:
 		return nil, fmt.Errorf("can't set both status and body in rule")

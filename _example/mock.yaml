@@ -57,6 +57,7 @@ rules:
             int32 multiplier = 2 [(groxypb.matcher) = "multiplier > 0"];
         }
     respond:
+      wait: 2s
       body: |
         message StubResponse { 
             option (groxypb.target) = true; 

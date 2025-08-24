@@ -47,7 +47,7 @@ tasks:
   stub-matcher:
     desc: make a request to the service with a value matcher, see summary for details
     summary: |
-      response will be: {"message": "10"}
+      mocker will wait for 2 seconds and the response will be: {"message": "10"}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
         -d '{"message":"matcher","multiplier":5}' \
