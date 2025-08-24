@@ -34,6 +34,7 @@ type Forward struct {
 
 // Respond specifies how the service should respond to the request.
 type Respond struct {
+	Wait     *string `yaml:"wait,omitempty" jsonschema:"title=Wait,description=An optional duration to wait before sending the response."`
 	Body     *string `yaml:"body,omitempty" jsonschema:"title=Body,description=The body to include in the response."`
 	Metadata *struct {
 		Header  map[string]string `yaml:"header"  jsonschema:"title=Header,description=A map of headers to include in the response."`

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/Semior001/groxy/_example"
+	examplepb "github.com/Semior001/groxy/_example/gen"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -46,6 +47,15 @@ func TestMain_Examples(t *testing.T) {
 		}
 	}
 
+	t.Run("stub-matcher", func(t *testing.T) {
+		c := examplepb.NewExampleServiceClient(conn)
+		started := time.Now()
+		resp, err := c.Stub(t.Context(), &examplepb.StubRequest{Message: "matcher", Multiplier: 5})
+		require.NoError(t, err)
+		assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{Message: "10"}, resp), "unexpected response: %v", resp)
+		assert.GreaterOrEqual(t, time.Since(started), 2*time.Second)
+	})
+
 	tests := []struct {
 		name    string
 		method  string
@@ -61,45 +71,38 @@ func TestMain_Examples(t *testing.T) {
 	}{
 		{
 			name:    "stub-with-header",
-			method:  _example.ExampleService_Stub_FullMethodName,
+			method:  examplepb.ExampleService_Stub_FullMethodName,
 			headers: map[string]string{"test": "true"},
-			input:   &_example.StubRequest{Message: "needed value"},
-			wantTyp: &_example.SomeOtherResponse{},
-			want:    protomsg(&_example.SomeOtherResponse{Message: "needed value received", Code: 200}),
+			input:   &examplepb.StubRequest{Message: "needed value"},
+			wantTyp: &examplepb.SomeOtherResponse{},
+			want:    protomsg(&examplepb.SomeOtherResponse{Message: "needed value received", Code: 200}),
 		},
 		{
 			name:    "stub-with-body",
-			method:  _example.ExampleService_Stub_FullMethodName,
-			input:   &_example.StubRequest{Message: "needed value"},
-			wantTyp: &_example.SomeOtherResponse{},
-			want:    protomsg(&_example.SomeOtherResponse{Message: "lol that works", Code: 400}),
+			method:  examplepb.ExampleService_Stub_FullMethodName,
+			input:   &examplepb.StubRequest{Message: "needed value"},
+			wantTyp: &examplepb.SomeOtherResponse{},
+			want:    protomsg(&examplepb.SomeOtherResponse{Message: "lol that works", Code: 400}),
 		},
 		{
 			name:    "stub-random-uuid",
-			method:  _example.ExampleService_Stub_FullMethodName,
-			input:   &_example.StubRequest{Message: "random"},
-			wantTyp: &_example.SomeOtherResponse{},
+			method:  examplepb.ExampleService_Stub_FullMethodName,
+			input:   &examplepb.StubRequest{Message: "random"},
+			wantTyp: &examplepb.SomeOtherResponse{},
 			want: func(t *testing.T, got proto.Message, err error, _, _ metadata.MD) {
 				require.NoError(t, err)
-				resp, ok := got.(*_example.SomeOtherResponse)
+				resp, ok := got.(*examplepb.SomeOtherResponse)
 				require.True(t, ok)
 				_, err = uuid.Parse(resp.Message)
 				assert.NoError(t, err, "response message is not a valid UUID: %s", resp.Message)
 			},
 		},
 		{
-			name:    "stub-matcher",
-			method:  _example.ExampleService_Stub_FullMethodName,
-			input:   &_example.StubRequest{Message: "matcher", Multiplier: 5},
-			wantTyp: &_example.SomeOtherResponse{},
-			want:    protomsg(&_example.SomeOtherResponse{Message: "10"}),
-		},
-		{
 			name:    "stub-generic",
-			method:  _example.ExampleService_Stub_FullMethodName,
-			wantTyp: &_example.SomeOtherResponse{},
-			want: protomsg(&_example.SomeOtherResponse{
-				Dependency: &_example.Dependency{
+			method:  examplepb.ExampleService_Stub_FullMethodName,
+			wantTyp: &examplepb.SomeOtherResponse{},
+			want: protomsg(&examplepb.SomeOtherResponse{
+				Dependency: &examplepb.Dependency{
 					Value:    "some value",
 					Flag:     true,
 					RichText: "some text",
@@ -108,8 +111,8 @@ func TestMain_Examples(t *testing.T) {
 		},
 		{
 			name:    "error",
-			method:  _example.ExampleService_Error_FullMethodName,
-			wantTyp: &_example.SomeOtherResponse{},
+			method:  examplepb.ExampleService_Error_FullMethodName,
+			wantTyp: &examplepb.SomeOtherResponse{},
 			want: func(t *testing.T, got proto.Message, err error, headers, trailers metadata.MD) {
 				require.Empty(t, got)
 				st, ok := status.FromError(err)

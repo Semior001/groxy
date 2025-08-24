@@ -63,6 +63,11 @@
     },
     "Respond": {
       "properties": {
+        "wait": {
+          "type": "string",
+          "title": "Wait",
+          "description": "An optional duration to wait before sending the response."
+        },
         "body": {
           "type": "string",
           "title": "Body",

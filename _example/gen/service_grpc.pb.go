@@ -4,7 +4,7 @@
 // - protoc             v4.24.4
 // source: _example/service.proto
 
-package _example
+package examplepb
 
 import (
 	context "context"

@@ -4,6 +4,7 @@ version: '3'
 
 includes:
   example: { taskfile: _example/Taskfile.yml }
+  bench: { taskfile: bench.taskfile.yml }
 
 env:
   GO_MODULE: github.com/Semior001/groxy
@@ -40,75 +41,6 @@ tasks:
     cmd: |
       go test -race -count=1 ./...
 
-  bench:
-    desc: "run benchmarks with ghz"
-    deps:
-      - bench:mocker
-      - bench:reverse-proxy
-      - bench:templated
-      - bench:request-matcher
-      - bench:complex-request-matcher
-
-  bench:server:
-    desc: "run grpc-echo server for manual tests"
-    cmds:
-      - cmd: docker run -d --rm -p 8081:8080 semior/grpc-echo:latest
-      - defer: docker stop $(docker ps -q --filter ancestor=semior/grpc-echo:latest)
-      - go run -ldflags "-X 'main.version=local'" ./cmd/groxy --reflection --file.name="_example/benchmark.yaml" {{.CLI_ARGS}}
-
-  bench:mocker:
-    desc: "run benchmarks for the mocking functionality"
-    vars:
-      HOST: "localhost:8080"
-      COUNT: "10000"
-    cmd: |
-      ghz --insecure \
-        --metadata '{"test": "mocker"}' \
-        --call 'grpc_echo/v1/EchoService/Echo' \
-        -d '{"ping": "mocker"}' -c 1 --total {{.COUNT}} {{.HOST}}
-
-  bench:reverse-proxy:
-    desc: "run benchmarks for reverse proxy functionality"
-    vars:
-      HOST: "localhost:8080"
-      COUNT: "10000"
-    cmd: |
-      ghz --insecure \
-        --metadata '{"test": "reverse-proxy"}' \
-        --call 'grpc_echo/v1/EchoService/Echo' \
-        -d '{"ping": "reverse-proxy"}' -c 1 --total {{.COUNT}} {{.HOST}}
-
-  bench:templater:
-    desc: "run benchmarks for templated response functionality"
-    vars:
-      HOST: "localhost:8080"
-      COUNT: "10000"
-    cmd: |
-      ghz --insecure \
-        --metadata '{"test": "templated"}' \
-        --call 'grpc_echo/v1/EchoService/Echo' \
-        -d '{"ping": "templated"}' -c 1 --total {{.COUNT}} {{.HOST}}
-
-  bench:request-matcher:
-    desc: "run benchmarks for request body matching functionality"
-    vars:
-      HOST: "localhost:8080"
-      COUNT: "10000"
-    cmd: |
-      ghz --insecure \
-        --call 'grpc_echo/v1/EchoService/Echo' \
-        -d '{"ping": "request-matcher"}' -c 1 --total {{.COUNT}} {{.HOST}}
-
-  bench:complex-request-matcher:
-    desc: "run benchmarks for request body matching functionality"
-    vars:
-      HOST: "localhost:8080"
-      COUNT: "10000"
-    cmd: |
-      ghz --insecure \
-        --call 'grpc_echo/v1/EchoService/Echo' \
-        -d '{"ping": "complex-request-matcher"}' -c 1 --total {{.COUNT}} {{.HOST}}
-
   gen:
     desc: "generate all"
     deps:
@@ -137,8 +69,8 @@ tasks:
     desc: "generate example"
     cmd: |
       protoc \
-        --go_out=./_example --go_opt=module=$GO_MODULE/_example \
-        --go-grpc_out=./_example --go-grpc_opt=module=$GO_MODULE/_example \
+        --go_out=./_example/gen      --go_opt=module=$GO_MODULE/_example/gen \
+        --go-grpc_out=./_example/gen --go-grpc_opt=module=$GO_MODULE/_example/gen \
         ./_example/*.proto
 
   gen:testdata:

@@ -4,7 +4,7 @@ package com.github.Semior001.groxy.example.mock;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/Semior001/groxy/_example;_example";
+option go_package = "github.com/Semior001/groxy/_example/gen;examplepb";
 
 service ExampleService {
   rpc Stub(StubRequest) returns (SomeOtherResponse);

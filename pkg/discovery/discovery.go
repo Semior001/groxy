@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Semior001/groxy/pkg/protodef"
 	"google.golang.org/grpc"
@@ -41,6 +42,7 @@ type State struct {
 
 // Mock contains the details of how the handler should reply to the downstream.
 type Mock struct {
+	Wait    time.Duration
 	Header  metadata.MD
 	Trailer metadata.MD
 	Body    protodef.Template

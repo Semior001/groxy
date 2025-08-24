@@ -88,6 +88,23 @@ rules:
         }
 ```
 
+To simulate slow responses, you can add a `wait` instruction:
+
+```yaml
+version: 1
+
+rules:
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+    respond:
+      wait: 2s  # Wait 2 seconds before responding
+      body: |
+        message StubResponse {
+            option              (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "Delayed response"];
+            int32 code     = 2 [(groxypb.value)  = "200"];
+        }
+```
+
 That's it. You just need to define the response message, mark it as a target response message via the option, and set values via the value option. The response message will be sent to the client when the client calls the "Stub" method. No need for providing protosets, no need for providing the whole set of definitions, just the message you want to send.
 
 More importantly, if your response message contains lots of fields, which are not important for the test, you can just ignore them. gRoxy will leave them empty, and the client will not be able to distinguish between the real server and the mock server. That's ensured by the protobuf's backward compatibility.
@@ -133,6 +150,7 @@ The `Respond` section contains the response for the request. The respond section
 
 | Field       | Required                   | Description                                                                                                         |
 |-------------|----------------------------|---------------------------------------------------------------------------------------------------------------------|
+| wait        | optional                   | Duration to wait before sending the response (e.g., "2s", "500ms"). Useful for simulating slow responses.          |
 | body        | optional                   | The body of the response. This must be a protobuf snippet that defines the response message with values to be sent. |
 | metadata    | optional                   | The metadata to be sent as a response.                                                                              |
 | status      | optional                   | The gRPC status to be sent as a response.                                                                           |

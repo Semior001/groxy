@@ -55,6 +55,7 @@ rules:
 
   - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
     respond:
+      wait: 10s
       body: |
         message Dependency {
             string some_dependant_value = 6;

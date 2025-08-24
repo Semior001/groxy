@@ -117,7 +117,7 @@ func TestFile_Rules(t *testing.T) {
 				URI:              regexp.MustCompile("com.github.Semior001.groxy.example.mock.ExampleService/Stub"),
 				IncomingMetadata: nil,
 			},
-			Mock: &discovery.Mock{},
+			Mock: &discovery.Mock{Wait: 10 * time.Second},
 		},
 		{
 			Name: "com.github.Semior001.groxy.example.mock.ExampleService/Error",
