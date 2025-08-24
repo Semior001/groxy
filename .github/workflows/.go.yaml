@@ -67,7 +67,6 @@ jobs:
       - name: build and push master image to ghcr.io
         if: ${{ github.ref == 'refs/heads/master' }}
         uses: docker/build-push-action@v5
-        continue-on-error: true
         timeout-minutes: 30
         with:
           push: true
@@ -88,7 +87,6 @@ jobs:
       - name: build and push tagged (latest) image to ghcr.io
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: docker/build-push-action@v5
-        continue-on-error: true
         timeout-minutes: 30
         with:
           push: true
