@@ -23,9 +23,7 @@ gRoxy is a gRPC mocking server that allows you to mock gRPC services and respons
     - [enums](#enums)
     - [repeated fields](#repeated-fields)
     - [maps](#maps)
-- [benchmark](#benchmark)
-  - [mocker](#mocker)
-  - [reverse-proxy](#reverse-proxy) 
+- [benchmarks](#benchmarks)
 - [project status](#status)
 
 ## todos
@@ -288,91 +286,198 @@ message StubResponse {
 }
 ```
 
-## benchmark
+## benchmarks
+All benchmarks were performed on a MacBook Pro 2021 with M1 Pro chip with 16GB of RAM.
+All benchmarks were measured by bringing up the [grpc-echo server](https://github.com/semior001/grpc-echo) and groxy with the [benchmark config](_example/benchmark.yaml).
+You may observe commands that were used to perform the benchmarks below in the taskfile, under the "bench" label.
 
-all benchmarks were performed on a MacBook Pro 2021 with M1 Pro chip with 16GB of RAM.
+<details>
+<summary>benchmarks</summary>
 
-### mocker
-
-single rule on mock
-
+- mocker (plain static response mockery):
 ```shell
-$ ghz --insecure --call 'grpc_echo/v1/EchoService/Echo' -d '{"ping": "Hello, world!"}' -c 1 --total 10000 localhost:8080
-
 Summary:
   Count:	10000
-  Total:	3.42 s
-  Slowest:	8.03 ms
-  Fastest:	0.12 ms
-  Average:	0.24 ms
-  Requests/sec:	2923.93
+  Total:	1.98 s
+  Slowest:	1.40 ms
+  Fastest:	0.06 ms
+  Average:	0.12 ms
+  Requests/sec:	5059.05
 
 Response time histogram:
-  0.119 [1]    |
-  0.909 [9965] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  1.700 [30]   |
-  2.491 [0]    |
-  3.282 [2]    |
-  4.072 [1]    |
-  4.863 [0]    |
-  5.654 [0]    |
-  6.444 [0]    |
-  7.235 [0]    |
-  8.026 [1]    |
+  0.056 [1]    |
+  0.190 [9483] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.325 [415]  |∎∎
+  0.459 [82]   |
+  0.594 [10]   |
+  0.729 [5]    |
+  0.863 [0]    |
+  0.998 [1]    |
+  1.133 [0]    |
+  1.267 [1]    |
+  1.402 [2]    |
 
 Latency distribution:
-  10 % in 0.17 ms 
-  25 % in 0.18 ms 
-  50 % in 0.21 ms 
-  75 % in 0.26 ms 
-  90 % in 0.35 ms 
-  95 % in 0.42 ms 
-  99 % in 0.66 ms 
+  10 % in 0.09 ms 
+  25 % in 0.10 ms 
+  50 % in 0.11 ms 
+  75 % in 0.12 ms 
+  90 % in 0.15 ms 
+  95 % in 0.19 ms 
+  99 % in 0.33 ms 
 
 Status code distribution:
   [OK]   10000 responses   
 ```
 
-### reverse-proxy
-
-performed with the use of [grpc-echo](https://github.com/Semior001/grpc-echo), single rule on upstream
-
+- reverse-proxy (forward the request to the grpc-echo server):
 ```shell
-$ ghz --insecure --call 'grpc_echo/v1/EchoService/Echo' -d '{"ping": "Hello, world!"}' -c 1 --total 10000 localhost:8080
 
 Summary:
   Count:	10000
-  Total:	10.16 s
-  Slowest:	43.56 ms
-  Fastest:	0.46 ms
-  Average:	0.90 ms
-  Requests/sec:	984.55
+  Total:	5.48 s
+  Slowest:	3.67 ms
+  Fastest:	0.33 ms
+  Average:	0.48 ms
+  Requests/sec:	1824.26
 
 Response time histogram:
-  0.456  [1]    |
-  4.767  [9980] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  9.078  [16]   |
-  13.389 [0]    |
-  17.700 [0]    |
-  22.010 [1]    |
-  26.321 [1]    |
-  30.632 [0]    |
-  34.943 [0]    |
-  39.254 [0]    |
-  43.564 [1]    |
+  0.334 [1]    |
+  0.668 [9704] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  1.001 [245]  |∎
+  1.335 [34]   |
+  1.669 [8]    |
+  2.003 [4]    |
+  2.336 [3]    |
+  2.670 [0]    |
+  3.004 [0]    |
+  3.338 [0]    |
+  3.672 [1]    |
 
 Latency distribution:
-  10 % in 0.61 ms 
-  25 % in 0.67 ms 
-  50 % in 0.78 ms 
-  75 % in 0.97 ms 
-  90 % in 1.25 ms 
-  95 % in 1.53 ms 
-  99 % in 2.57 ms 
+  10 % in 0.41 ms 
+  25 % in 0.43 ms 
+  50 % in 0.45 ms 
+  75 % in 0.49 ms 
+  90 % in 0.55 ms 
+  95 % in 0.61 ms 
+  99 % in 0.83 ms 
 
 Status code distribution:
   [OK]   10000 responses   
 ```
+
+- templater (template the response based on the request content):
+```shell
+
+Summary:
+  Count:	10000
+  Total:	2.08 s
+  Slowest:	3.72 ms
+  Fastest:	0.06 ms
+  Average:	0.13 ms
+  Requests/sec:	4806.56
+
+Response time histogram:
+  0.063 [1]    |
+  0.429 [9928] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.795 [44]   |
+  1.161 [12]   |
+  1.527 [5]    |
+  1.893 [5]    |
+  2.259 [2]    |
+  2.625 [1]    |
+  2.991 [0]    |
+  3.357 [0]    |
+  3.723 [2]    |
+
+Latency distribution:
+  10 % in 0.09 ms 
+  25 % in 0.10 ms 
+  50 % in 0.11 ms 
+  75 % in 0.13 ms 
+  90 % in 0.17 ms 
+  95 % in 0.22 ms 
+  99 % in 0.39 ms 
+
+Status code distribution:
+  [OK]   10000 responses   
+```
+
+- request-matcher (match the entire content of the request, full match):
+```shell
+Summary:
+  Count:	10000
+  Total:	5.05 s
+  Slowest:	10.87 ms
+  Fastest:	0.21 ms
+  Average:	0.42 ms
+  Requests/sec:	1978.94
+
+Response time histogram:
+  0.215  [1]    |
+  1.280  [9847] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  2.346  [93]   |
+  3.411  [35]   |
+  4.476  [10]   |
+  5.541  [6]    |
+  6.607  [3]    |
+  7.672  [0]    |
+  8.737  [3]    |
+  9.803  [1]    |
+  10.868 [1]    |
+
+Latency distribution:
+  10 % in 0.26 ms 
+  25 % in 0.28 ms 
+  50 % in 0.31 ms 
+  75 % in 0.41 ms 
+  90 % in 0.70 ms 
+  95 % in 0.86 ms 
+  99 % in 1.73 ms 
+
+Status code distribution:
+  [OK]   10000 responses   
+```
+
+- complex-request-matcher (match the content of the request with complex expressions, i.e. use of expr language):
+```shell
+
+Summary:
+  Count:	10000
+  Total:	2.05 s
+  Slowest:	1.30 ms
+  Fastest:	0.06 ms
+  Average:	0.12 ms
+  Requests/sec:	4886.13
+
+Response time histogram:
+  0.063 [1]    |
+  0.186 [9362] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  0.310 [515]  |∎∎
+  0.433 [100]  |
+  0.556 [17]   |
+  0.680 [4]    |
+  0.803 [0]    |
+  0.926 [0]    |
+  1.050 [0]    |
+  1.173 [0]    |
+  1.297 [1]    |
+
+Latency distribution:
+  10 % in 0.09 ms 
+  25 % in 0.10 ms 
+  50 % in 0.11 ms 
+  75 % in 0.13 ms 
+  90 % in 0.16 ms 
+  95 % in 0.21 ms 
+  99 % in 0.33 ms 
+
+Status code distribution:
+  [OK]   10000 responses    
+```
+
+</details>
 
 ## status
 The project is currently in active development, and breaking changes may occur until the release of version 1.0. However, we strive to minimize disruptions and will only introduce breaking changes when there is a compelling reason to do so.

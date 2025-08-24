@@ -36,9 +36,7 @@
       "type": "object",
       "required": [
         "version",
-        "not-matched",
-        "rules",
-        "upstreams"
+        "rules"
       ]
     },
     "Forward": {

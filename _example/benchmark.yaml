@@ -1,0 +1,64 @@
+## this config requires the grpc-echo server to be running on localhost:8081
+## https://github.com/semior001/grpc-echo
+## docker run --rm -p 8081:8080 semior/grpc-echo:latest
+version: "1"
+
+upstreams:
+  echo:
+    address: localhost:8081
+    tls: false
+    serve-reflection: true
+
+rules:
+  - match:
+      uri: grpc_echo.v1.EchoService/Echo
+      header: { test: mocker }
+    respond:
+      body: |
+        message Response { 
+          option (groxypb.target) = true; 
+        }
+
+  - match:
+      uri: grpc_echo.v1.EchoService/Echo
+      header: { test: reverse-proxy }
+    forward:
+      upstream: echo
+
+  - match:
+      uri: grpc_echo.v1.EchoService/Echo
+      header: { test: templated }
+    respond:
+      body: |
+        message Response { 
+          option (groxypb.target) = true; 
+          string pong = 2 [(groxypb.value) = `{{.ping}} pong`]; 
+        }
+
+  - match:
+      uri: grpc_echo.v1.EchoService/Echo
+      body: |
+        message Request { 
+          option (groxypb.target) = true; 
+          string ping = 1 [(groxypb.value) = `request-matcher`];
+        }
+    respond:
+      body: |
+        message Response { 
+          option (groxypb.target) = true; 
+          string pong = 2 [(groxypb.value) = `request matched`]; 
+        }
+
+  - match:
+      uri: grpc_echo.v1.EchoService/Echo
+      body: |
+        message Request { 
+          option (groxypb.target) = true; 
+          string ping = 1 [(groxypb.matcher) = `ping == "complex-request-matcher"`];
+        }
+    respond:
+      body: |
+        message Response { 
+          option (groxypb.target) = true; 
+          string pong = 2 [(groxypb.value) = `request matched`]; 
+        }

@@ -2,10 +2,10 @@ package fileprovider
 
 // Config defines a set of rules for the proxy to use.
 type Config struct {
-	Version    string              `yaml:"version"     jsonschema:"title=Config Version,description=The version of the config schema."`
-	NotMatched *Respond            `yaml:"not-matched" jsonschema:"title=Default Response,description=The default response to return when no rules match."`
-	Rules      []Rule              `yaml:"rules"       jsonschema:"title=Rules,description=A list of rules to match incoming requests against."`
-	Upstreams  map[string]Upstream `yaml:"upstreams"   jsonschema:"title=Upstreams,description=A map of upstream services that can be forwarded to."`
+	Version    string              `yaml:"version"               jsonschema:"title=Config Version,description=The version of the config schema."`
+	NotMatched *Respond            `yaml:"not-matched,omitempty" jsonschema:"title=Default Response,description=The default response to return when no rules match."`
+	Rules      []Rule              `yaml:"rules"                 jsonschema:"title=Rules,description=A list of rules to match incoming requests against."`
+	Upstreams  map[string]Upstream `yaml:"upstreams,omitempty"   jsonschema:"title=Upstreams,description=A map of upstream services that can be forwarded to."`
 }
 
 // Upstream specifies a service to forward requests to.
