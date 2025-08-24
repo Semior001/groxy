@@ -43,9 +43,21 @@ tasks:
   gen:
     desc: "generate all"
     deps:
+      - gen:jsonschema
       - gen:example
       - gen:annotation
       - gen:testdata
+
+  gen:jsonschema:
+    desc: "generate jsonschema"
+    cmd: |
+      go run ./cmd/jsonschemagen \
+        --title "gRoxy Configuration Schema" \
+        --description "JSON schema for gRoxy proxy configuration files" \
+        --schema-version "https://json-schema.org/draft/2020-12/schema" \
+        --id "https://raw.githubusercontent.com/Semior001/groxy/refs/heads/master/schema.json" \
+        --output schema.json \
+        {{.CLI_ARGS}}
 
   gen:annotation:
     desc: "generate annotation"

@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Semior001/groxy/pkg/discovery/fileprovider/config",
+  "$ref": "#/$defs/Config",
+  "$defs": {
+    "Config": {
+      "properties": {
+        "version": {
+          "type": "string",
+          "title": "Config Version",
+          "description": "The version of the config schema."
+        },
+        "not-matched": {
+          "$ref": "#/$defs/Respond",
+          "title": "Default Response",
+          "description": "The default response to return when no rules match."
+        },
+        "rules": {
+          "items": {
+            "$ref": "#/$defs/Rule"
+          },
+          "type": "array",
+          "title": "Rules",
+          "description": "A list of rules to match incoming requests against."
+        },
+        "upstreams": {
+          "additionalProperties": {
+            "$ref": "#/$defs/Upstream"
+          },
+          "type": "object",
+          "title": "Upstreams",
+          "description": "A map of upstream services that can be forwarded to."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "version",
+        "not-matched",
+        "rules",
+        "upstreams"
+      ]
+    },
+    "Forward": {
+      "properties": {
+        "upstream": {
+          "type": "string",
+          "title": "Upstream",
+          "description": "The name of the upstream service to forward the request to."
+        },
+        "header": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "type": "object",
+          "title": "Header",
+          "description": "A map of headers to add to the request when forwarding."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "upstream"
+      ]
+    },
+    "Respond": {
+      "properties": {
+        "body": {
+          "type": "string",
+          "title": "Body",
+          "description": "The body to include in the response."
+        },
+        "metadata": {
+          "properties": {
+            "header": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object",
+              "title": "Header",
+              "description": "A map of headers to include in the response."
+            },
+            "trailer": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object",
+              "title": "Trailer",
+              "description": "A map of trailers to include in the response."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "header",
+            "trailer"
+          ],
+          "title": "Metadata",
+          "description": "Additional metadata to include in the response."
+        },
+        "status": {
+          "properties": {
+            "code": {
+              "type": "string",
+              "title": "Code",
+              "description": "The gRPC status code to include in the response."
+            },
+            "message": {
+              "type": "string",
+              "title": "Message",
+              "description": "The gRPC status message to include in the response."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "code",
+            "message"
+          ],
+          "title": "Status",
+          "description": "The gRPC status to include in the response. Mutually exclusive with 'body'."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Rule": {
+      "properties": {
+        "match": {
+          "properties": {
+            "uri": {
+              "type": "string",
+              "title": "URI",
+              "description": "The URI to match against."
+            },
+            "header": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object",
+              "title": "Header",
+              "description": "A map of headers to match against."
+            },
+            "body": {
+              "type": "string",
+              "title": "Body",
+              "description": "The body to match against."
+            }
+          },
+          "additionalProperties": false,
+          "type": "object",
+          "required": [
+            "uri"
+          ],
+          "title": "Match",
+          "description": "The criteria to match incoming requests against."
+        },
+        "respond": {
+          "$ref": "#/$defs/Respond",
+          "title": "Respond",
+          "description": "How to respond to the request if it matches. Mutually exclusive with 'forward'."
+        },
+        "forward": {
+          "$ref": "#/$defs/Forward",
+          "title": "Forward",
+          "description": "How to forward the request if it matches. Mutually exclusive with 'respond'."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "match"
+      ]
+    },
+    "Upstream": {
+      "properties": {
+        "address": {
+          "type": "string",
+          "title": "Address",
+          "description": "The address of the upstream service"
+        },
+        "tls": {
+          "type": "boolean",
+          "title": "TLS",
+          "description": "Whether to use TLS when connecting to the upstream service."
+        },
+        "serve-reflection": {
+          "type": "boolean",
+          "title": "Serve Reflection",
+          "description": "Whether to include the reflection from the upstream service."
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "required": [
+        "address",
+        "tls",
+        "serve-reflection"
+      ]
+    }
+  },
+  "type": "object",
+  "title": "gRoxy Configuration Schema",
+  "description": "JSON schema for gRoxy proxy configuration files"
+}
