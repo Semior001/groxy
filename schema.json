@@ -41,6 +41,11 @@
     },
     "Forward": {
       "properties": {
+        "rewrite": {
+          "type": "string",
+          "title": "Rewrite",
+          "description": "An optional URI to rewrite the request to when forwarding. Uses regexp replace syntax."
+        },
         "upstream": {
           "type": "string",
           "title": "Upstream",

@@ -79,3 +79,10 @@ tasks:
       grpcurl -plaintext -use-reflection \
         {{.CLI_ARGS}} \
         localhost:8080 grpc_echo.v1.EchoService/Echo
+
+  upstream-rewrite:
+    desc: make a request that will be passed to the upstream service with a rewritten method, requires the upstream service to be running
+    cmd: |
+      grpcurl -plaintext -proto '_example/service.proto' \
+        {{.CLI_ARGS}} \
+        localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/SomeEchoMethod

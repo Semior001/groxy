@@ -28,6 +28,7 @@ type Rule struct {
 
 // Forward specifies how the service should forward the request.
 type Forward struct {
+	Rewrite  *string           `yaml:"rewrite,omitempty"  jsonschema:"title=Rewrite,description=An optional URI to rewrite the request to when forwarding. Uses regexp replace syntax."`
 	Upstream string            `yaml:"upstream" jsonschema:"title=Upstream,description=The name of the upstream service to forward the request to."`
 	Header   map[string]string `yaml:"header,omitempty"   jsonschema:"title=Header,description=A map of headers to add to the request when forwarding."`
 }

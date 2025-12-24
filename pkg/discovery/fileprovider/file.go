@@ -253,6 +253,10 @@ func (d *File) parseRule(r Rule, upstreams []discovery.Upstream) (result discove
 
 	if r.Forward != nil {
 		result.Forward = &discovery.Forward{Header: metadata.New(r.Forward.Header)}
+		if r.Forward.Rewrite != nil {
+			result.Forward.Rewrite = *r.Forward.Rewrite
+		}
+
 		for _, up := range upstreams {
 			if up.Name() == r.Forward.Upstream {
 				result.Forward.Upstream = up
