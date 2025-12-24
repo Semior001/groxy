@@ -117,3 +117,11 @@ rules:
       header:
         X-Request-Id: "123"
 
+  # The next rule will forward the request to the specified upstream.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Some([a-zA-Z]+)Method" }
+    forward:
+      rewrite: "grpc_echo.v1.EchoService/$1"
+      upstream: echo
+      header:
+        X-Request-Id: "123"
+

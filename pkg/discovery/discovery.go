@@ -68,6 +68,7 @@ type Rule struct {
 // Forward specifies the upstream to forward the request and the parameters
 // to invoke the upstream.
 type Forward struct {
+	Rewrite  string
 	Upstream Upstream
 	Header   metadata.MD
 }

@@ -20,9 +20,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ExampleService_Stub_FullMethodName     = "/com.github.Semior001.groxy.example.mock.ExampleService/Stub"
-	ExampleService_Error_FullMethodName    = "/com.github.Semior001.groxy.example.mock.ExampleService/Error"
-	ExampleService_NotFound_FullMethodName = "/com.github.Semior001.groxy.example.mock.ExampleService/NotFound"
+	ExampleService_Stub_FullMethodName           = "/com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+	ExampleService_Error_FullMethodName          = "/com.github.Semior001.groxy.example.mock.ExampleService/Error"
+	ExampleService_NotFound_FullMethodName       = "/com.github.Semior001.groxy.example.mock.ExampleService/NotFound"
+	ExampleService_SomeEchoMethod_FullMethodName = "/com.github.Semior001.groxy.example.mock.ExampleService/SomeEchoMethod"
 )
 
 // ExampleServiceClient is the client API for ExampleService service.
@@ -32,6 +33,9 @@ type ExampleServiceClient interface {
 	Stub(ctx context.Context, in *StubRequest, opts ...grpc.CallOption) (*SomeOtherResponse, error)
 	Error(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	NotFound(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// This method is a copy of https://github.com/Semior001/grpc-echo/blob/main/echopb/echo.proto,
+	// used to test gRPC method rewriting.
+	SomeEchoMethod(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error)
 }
 
 type exampleServiceClient struct {
@@ -69,6 +73,15 @@ func (c *exampleServiceClient) NotFound(ctx context.Context, in *emptypb.Empty, 
 	return out, nil
 }
 
+func (c *exampleServiceClient) SomeEchoMethod(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error) {
+	out := new(EchoResponse)
+	err := c.cc.Invoke(ctx, ExampleService_SomeEchoMethod_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ExampleServiceServer is the server API for ExampleService service.
 // All implementations must embed UnimplementedExampleServiceServer
 // for forward compatibility
@@ -76,6 +89,9 @@ type ExampleServiceServer interface {
 	Stub(context.Context, *StubRequest) (*SomeOtherResponse, error)
 	Error(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	NotFound(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// This method is a copy of https://github.com/Semior001/grpc-echo/blob/main/echopb/echo.proto,
+	// used to test gRPC method rewriting.
+	SomeEchoMethod(context.Context, *EchoRequest) (*EchoResponse, error)
 	mustEmbedUnimplementedExampleServiceServer()
 }
 
@@ -91,6 +107,9 @@ func (UnimplementedExampleServiceServer) Error(context.Context, *emptypb.Empty) 
 }
 func (UnimplementedExampleServiceServer) NotFound(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NotFound not implemented")
+}
+func (UnimplementedExampleServiceServer) SomeEchoMethod(context.Context, *EchoRequest) (*EchoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SomeEchoMethod not implemented")
 }
 func (UnimplementedExampleServiceServer) mustEmbedUnimplementedExampleServiceServer() {}
 
@@ -159,6 +178,24 @@ func _ExampleService_NotFound_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ExampleService_SomeEchoMethod_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EchoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ExampleServiceServer).SomeEchoMethod(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ExampleService_SomeEchoMethod_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ExampleServiceServer).SomeEchoMethod(ctx, req.(*EchoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ExampleService_ServiceDesc is the grpc.ServiceDesc for ExampleService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -177,6 +214,10 @@ var ExampleService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NotFound",
 			Handler:    _ExampleService_NotFound_Handler,
+		},
+		{
+			MethodName: "SomeEchoMethod",
+			Handler:    _ExampleService_SomeEchoMethod_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

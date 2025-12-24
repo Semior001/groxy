@@ -255,6 +255,10 @@ func (s *Server) forwardMiddleware(next grpc.StreamHandler) grpc.StreamHandler {
 
 		upstreamHeader, upstreamTrailer := metadata.New(nil), metadata.New(nil)
 
+		if match.Forward.Rewrite != "" {
+			mtd = match.Match.URI.ReplaceAllString(mtd, match.Forward.Rewrite)
+		}
+
 		upstream, err := match.Forward.Upstream.NewStream(ctx, desc, mtd,
 			grpc.ForceCodec(grpcx.RawBytesCodec{}),
 			grpc.Header(&upstreamHeader),
