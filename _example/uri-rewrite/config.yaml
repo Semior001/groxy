@@ -1,0 +1,17 @@
+version: 1
+
+upstreams:
+  echo:
+    address: "grpc-echo.semior.dev:443"
+    tls: true
+    serve-reflection: true
+
+rules:
+    # Rewrites the URI using a regex capture group before forwarding
+    # to the upstream. E.g. "SomeEchoMethod" becomes "EchoService/Echo".
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Some([a-zA-Z]+)Method" }
+    forward:
+      rewrite: "grpc_echo.v1.EchoService/$1"
+      upstream: echo
+      header:
+        X-Request-Id: "123"

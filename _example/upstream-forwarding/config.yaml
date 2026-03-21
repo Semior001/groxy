@@ -1,0 +1,16 @@
+version: 1
+
+upstreams:
+  echo:
+    address: "grpc-echo.semior.dev:443"
+    tls: true
+    serve-reflection: true
+
+rules:
+    # Forwards the request to the upstream echo service,
+    # injecting an additional header.
+  - match: { uri: "grpc_echo.v1.EchoService/Echo" }
+    forward:
+      upstream: echo
+      header:
+        X-Request-Id: "123"

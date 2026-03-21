@@ -14,10 +14,13 @@ import (
 
 	"github.com/Semior001/groxy/_example"
 	examplepb "github.com/Semior001/groxy/_example/gen"
+	"github.com/Semior001/groxy/pkg/discovery/fileprovider"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"gopkg.in/yaml.v3"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -30,12 +33,57 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestMain_Examples(t *testing.T) {
-	// This test basically must be a copy of _example/Taskfile.yml execution.
-	// It ensures that the example config works as intended.
-	// If you change the example config, please update this test as well.
+// exampleConfigPaths lists all example config files in the order matching
+// the original mock.yaml rule ordering (important for the combined test).
+var exampleConfigPaths = []string{
+	"header-matching/config.yaml",
+	"templating/config.yaml",
+	"body-matching/config.yaml",
+	"nested-messages/config.yaml",
+	"error-responses/config.yaml",
+	"upstream-forwarding/config.yaml",
+	"uri-rewrite/config.yaml",
+}
 
-	_, conn := setup(t, _example.Examples)
+// readExampleConfig reads and returns a single example config from the embedded FS.
+func readExampleConfig(t *testing.T, path string) string {
+	t.Helper()
+	data, err := _example.ExampleConfigs.ReadFile(path)
+	require.NoError(t, err)
+	return string(data)
+}
+
+// combinedExampleConfig merges all example configs into one, preserving rule
+// order. This produces a config equivalent to the original monolithic mock.yaml.
+func combinedExampleConfig(t *testing.T) string {
+	t.Helper()
+	combined := fileprovider.Config{
+		Version:   "1",
+		Upstreams: map[string]fileprovider.Upstream{},
+	}
+	for _, path := range exampleConfigPaths {
+		data, err := _example.ExampleConfigs.ReadFile(path)
+		require.NoError(t, err)
+
+		var cfg fileprovider.Config
+		require.NoError(t, yaml.Unmarshal(data, &cfg))
+
+		combined.Rules = append(combined.Rules, cfg.Rules...)
+		for k, v := range cfg.Upstreams {
+			combined.Upstreams[k] = v
+		}
+	}
+	out, err := yaml.Marshal(combined)
+	require.NoError(t, err)
+	return string(out)
+}
+
+func TestMain_Examples(t *testing.T) {
+	// Combined regression test: loads all example configs merged into one
+	// server, mirroring the original monolithic mock.yaml behavior.
+	// Rule ordering matters here (e.g. header-matching before body-matching).
+
+	_, conn := setup(t, combinedExampleConfig(t))
 	waitForServerUp(t, conn)
 
 	protomsg := func(want proto.Message) func(*testing.T, proto.Message, error, metadata.MD, metadata.MD) {
@@ -151,6 +199,108 @@ func TestMain_Examples(t *testing.T) {
 			tt.want(t, resp, err, headers, trailers)
 		})
 	}
+}
+
+func TestMain_ExampleHeaderMatching(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "header-matching/config.yaml"))
+	waitForServerUp(t, conn)
+
+	c := examplepb.NewExampleServiceClient(conn)
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "test", "true")
+	resp, err := c.Stub(ctx, &examplepb.StubRequest{Message: "needed value"})
+	require.NoError(t, err)
+	assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{Message: "needed value received", Code: 200}, resp))
+}
+
+func TestMain_ExampleTemplating(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "templating/config.yaml"))
+	waitForServerUp(t, conn)
+
+	c := examplepb.NewExampleServiceClient(conn)
+
+	t.Run("uuid", func(t *testing.T) {
+		resp, err := c.Stub(t.Context(), &examplepb.StubRequest{Message: "random"})
+		require.NoError(t, err)
+		_, err = uuid.Parse(resp.Message)
+		assert.NoError(t, err, "response message is not a valid UUID: %s", resp.Message)
+	})
+
+	t.Run("expression-matcher", func(t *testing.T) {
+		started := time.Now()
+		resp, err := c.Stub(t.Context(), &examplepb.StubRequest{Message: "matcher", Multiplier: 5})
+		require.NoError(t, err)
+		assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{Message: "10"}, resp))
+		assert.GreaterOrEqual(t, time.Since(started), 2*time.Second)
+	})
+}
+
+func TestMain_ExampleBodyMatching(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "body-matching/config.yaml"))
+	waitForServerUp(t, conn)
+
+	c := examplepb.NewExampleServiceClient(conn)
+	resp, err := c.Stub(t.Context(), &examplepb.StubRequest{Message: "needed value"})
+	require.NoError(t, err)
+	assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{Message: "lol that works", Code: 400}, resp))
+}
+
+func TestMain_ExampleNestedMessages(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "nested-messages/config.yaml"))
+	waitForServerUp(t, conn)
+
+	c := examplepb.NewExampleServiceClient(conn)
+	resp, err := c.Stub(t.Context(), &examplepb.StubRequest{})
+	require.NoError(t, err)
+	assert.True(t, proto.Equal(&examplepb.SomeOtherResponse{
+		Dependency: &examplepb.Dependency{
+			Value:    "some value",
+			Flag:     true,
+			RichText: "some text",
+		},
+	}, resp))
+}
+
+func TestMain_ExampleErrorResponses(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "error-responses/config.yaml"))
+	waitForServerUp(t, conn)
+
+	var headers, trailers metadata.MD
+	err := conn.Invoke(
+		context.Background(),
+		examplepb.ExampleService_Error_FullMethodName,
+		nil,
+		&examplepb.SomeOtherResponse{},
+		grpc.Header(&headers),
+		grpc.Trailer(&trailers),
+	)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.InvalidArgument, st.Code())
+	assert.Equal(t, "invalid request", st.Message())
+	assert.Equal(t, []string{"123"}, headers.Get("X-Request-Id"))
+	assert.Equal(t, []string{"groxy"}, trailers.Get("Powered-By"))
+}
+
+func TestMain_ExampleUpstreamForwarding(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "upstream-forwarding/config.yaml"))
+	waitForServerUp(t, conn)
+
+	ctx := metadata.AppendToOutgoingContext(context.Background(), "X-Request-Id", "12345")
+	resp := &echopb.EchoResponse{}
+	err := conn.Invoke(ctx, echopb.EchoService_Echo_FullMethodName, &echopb.EchoRequest{Ping: "hello"}, resp)
+	require.NoError(t, err)
+	assert.Equal(t, "hello", resp.Body)
+	assert.Equal(t, "12345", resp.Headers["x-request-id"])
+}
+
+func TestMain_ExampleURIRewrite(t *testing.T) {
+	_, conn := setup(t, readExampleConfig(t, "uri-rewrite/config.yaml"))
+	waitForServerUp(t, conn)
+
+	c := examplepb.NewExampleServiceClient(conn)
+	resp, err := c.SomeEchoMethod(t.Context(), &examplepb.EchoRequest{Ping: "hello"})
+	require.NoError(t, err)
+	assert.Equal(t, "hello", resp.Body)
 }
 
 func TestMain_ReverseProxy(t *testing.T) {

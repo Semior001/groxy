@@ -1,0 +1,19 @@
+version: 1
+
+rules:
+    # Responds with a predefined message when the request body matches
+    # a specific field value.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "needed value"];
+        }
+    respond:
+      body: |
+        message StubResponse {
+            option              (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "lol that works"];
+            int32 code     = 2 [(groxypb.value)  = "400"];
+        }

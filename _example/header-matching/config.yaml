@@ -1,0 +1,20 @@
+version: 1
+
+rules:
+    # Responds with a predefined message when the request has header "test: true"
+    # and a matching body field.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      header: { test: true }
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "needed value"];
+        }
+    respond:
+      body: |
+        message StubResponse {
+            option              (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "needed value received"];
+            int32 code     = 2 [(groxypb.value)  = "200"];
+        }
