@@ -4,6 +4,7 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
+	"maps"
 	"math/rand"
 	"net"
 	"os"
@@ -70,9 +71,7 @@ func combinedExampleConfig(t *testing.T) string {
 		require.NoError(t, yaml.Unmarshal(data, &cfg))
 
 		combined.Rules = append(combined.Rules, cfg.Rules...)
-		for k, v := range cfg.Upstreams {
-			combined.Upstreams[k] = v
-		}
+		maps.Copy(combined.Upstreams, cfg.Upstreams)
 	}
 	out, err := yaml.Marshal(combined)
 	require.NoError(t, err)
@@ -84,7 +83,13 @@ func TestMain_Examples(t *testing.T) {
 	// server, mirroring the original monolithic mock.yaml behavior.
 	// Rule ordering matters here (e.g. header-matching before body-matching).
 
-	_, conn := setup(t, combinedExampleConfig(t))
+	echoAddr := startEchoServer(t)
+
+	cfg := combinedExampleConfig(t)
+	cfg = strings.ReplaceAll(cfg, "grpc-echo.semior.dev:443", echoAddr)
+	cfg = strings.ReplaceAll(cfg, "tls: true", "tls: false")
+
+	_, conn := setup(t, cfg)
 	waitForServerUp(t, conn)
 
 	protomsg := func(want proto.Message) func(*testing.T, proto.Message, error, metadata.MD, metadata.MD) {
@@ -465,7 +470,7 @@ func waitForServerUp(tb testing.TB, conn *grpc.ClientConn) {
 	tb.Helper()
 
 	healthClient := healthpb.NewHealthClient(conn)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		time.Sleep(time.Millisecond * 100)
 		st, err := healthClient.Check(context.Background(), &healthpb.HealthCheckRequest{})
 		if err == nil && st.Status == healthpb.HealthCheckResponse_SERVING {
