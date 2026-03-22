@@ -54,7 +54,8 @@ func readExampleConfig(t *testing.T, path string) string {
 }
 
 // combinedExampleConfig merges all example configs into one, preserving rule
-// order. This produces a config equivalent to the original monolithic mock.yaml.
+// order. This produces a config similar to the original monolithic mock.yaml,
+// combining rules and upstreams but not merging any not-matched defaults.
 func combinedExampleConfig(t *testing.T) string {
 	t.Helper()
 	combined := fileprovider.Config{
@@ -282,7 +283,13 @@ func TestMain_ExampleErrorResponses(t *testing.T) {
 }
 
 func TestMain_ExampleUpstreamForwarding(t *testing.T) {
-	_, conn := setup(t, readExampleConfig(t, "upstream-forwarding/config.yaml"))
+	echoAddr := startEchoServer(t)
+
+	cfg := readExampleConfig(t, "upstream-forwarding/config.yaml")
+	cfg = strings.ReplaceAll(cfg, "grpc-echo.semior.dev:443", echoAddr)
+	cfg = strings.ReplaceAll(cfg, "tls: true", "tls: false")
+
+	_, conn := setup(t, cfg)
 	waitForServerUp(t, conn)
 
 	ctx := metadata.AppendToOutgoingContext(context.Background(), "X-Request-Id", "12345")
@@ -294,7 +301,13 @@ func TestMain_ExampleUpstreamForwarding(t *testing.T) {
 }
 
 func TestMain_ExampleURIRewrite(t *testing.T) {
-	_, conn := setup(t, readExampleConfig(t, "uri-rewrite/config.yaml"))
+	echoAddr := startEchoServer(t)
+
+	cfg := readExampleConfig(t, "uri-rewrite/config.yaml")
+	cfg = strings.ReplaceAll(cfg, "grpc-echo.semior.dev:443", echoAddr)
+	cfg = strings.ReplaceAll(cfg, "tls: true", "tls: false")
+
+	_, conn := setup(t, cfg)
 	waitForServerUp(t, conn)
 
 	c := examplepb.NewExampleServiceClient(conn)

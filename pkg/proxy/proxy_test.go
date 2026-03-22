@@ -187,7 +187,7 @@ func TestServer_handle(t *testing.T) {
 			stream, err := cl.BiDirectional(context.Background())
 			require.NoError(t, err)
 
-			for i := 0; i < 5; i++ {
+			for range 5 {
 				require.NoError(t, stream.Send(&grpctest.StreamRequest{Value: "ping"}))
 				resp, err := stream.Recv()
 				require.NoError(t, err)
@@ -204,7 +204,7 @@ func TestServer_handle(t *testing.T) {
 			stream, err := cl.ClientStream(context.Background(), grpc.Header(&header), grpc.Trailer(&trailer))
 			require.NoError(t, err)
 
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				require.NoError(t, stream.Send(&grpctest.StreamRequest{Value: fmt.Sprint(i)}))
 			}
 
@@ -221,7 +221,7 @@ func TestServer_handle(t *testing.T) {
 			stream, err := cl.ServerStream(context.Background(), &grpctest.StreamRequest{Value: "5"})
 			require.NoError(t, err)
 
-			for i := 0; i < 5; i++ {
+			for i := range 5 {
 				resp, err := stream.Recv()
 				require.NoError(t, err)
 

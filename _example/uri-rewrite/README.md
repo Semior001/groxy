@@ -4,7 +4,7 @@ Demonstrates rewriting the gRPC method URI using regex capture groups before for
 
 ## What it does
 
-Matches requests to `ExampleService/Some<Name>Method` (e.g. `SomeEchoMethod`) and rewrites the URI to `EchoService/<Name>` (e.g. `EchoService/Echo`) before forwarding to the upstream.
+Matches requests to `ExampleService/Some<Name>Method` (e.g. `SomeEchoMethod`) and rewrites the URI to `grpc_echo.v1.EchoService/<Name>` (e.g. `grpc_echo.v1.EchoService/Echo`) before forwarding to the upstream.
 
 ## Config walkthrough
 
@@ -13,7 +13,7 @@ rules:
   - match:
       uri: "...ExampleService/Some([a-zA-Z]+)Method"  # captures "Echo"
     forward:
-      rewrite: "grpc_echo.v1.EchoService/$1"           # becomes "EchoService/Echo"
+      rewrite: "grpc_echo.v1.EchoService/$1"           # becomes "grpc_echo.v1.EchoService/Echo"
       upstream: echo
 ```
 
@@ -30,4 +30,4 @@ grpcurl -plaintext -proto '_example/service.proto' \
   localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/SomeEchoMethod
 ```
 
-Expected: response from the upstream echo service (the URI was rewritten to `EchoService/Echo`).
+Expected: response from the upstream echo service (the URI was rewritten to `grpc_echo.v1.EchoService/Echo`).

@@ -4,7 +4,7 @@ Demonstrates forwarding a gRPC request to an upstream service with injected head
 
 ## What it does
 
-Matches requests to `EchoService/Echo` and forwards them to the configured upstream (`grpc-echo.semior.dev:443`), adding an `X-Request-Id` header.
+Matches requests to `grpc_echo.v1.EchoService/Echo` and forwards them to the configured upstream (`grpc-echo.semior.dev:443`), adding an `X-Request-Id` header.
 
 ## Config walkthrough
 

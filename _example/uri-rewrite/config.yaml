@@ -8,7 +8,7 @@ upstreams:
 
 rules:
     # Rewrites the URI using a regex capture group before forwarding
-    # to the upstream. E.g. "SomeEchoMethod" becomes "EchoService/Echo".
+    # to the upstream. E.g. "SomeEchoMethod" becomes "grpc_echo.v1.EchoService/Echo".
   - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Some([a-zA-Z]+)Method" }
     forward:
       rewrite: "grpc_echo.v1.EchoService/$1"
