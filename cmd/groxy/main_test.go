@@ -80,8 +80,8 @@ func combinedExampleConfig(t *testing.T) string {
 
 func TestMain_Examples(t *testing.T) {
 	// Combined regression test: loads all example configs merged into one
-	// server, mirroring the original monolithic mock.yaml behavior.
-	// Rule ordering matters here (e.g. header-matching before body-matching).
+	// server to approximate the original monolithic mock.yaml (rule ordering,
+	// upstream wiring) but without any global not-matched defaults.
 
 	echoAddr := startEchoServer(t)
 
