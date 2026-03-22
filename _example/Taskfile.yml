@@ -2,20 +2,26 @@
 
 version: '3'
 
+vars:
+  CONFIG: '{{.CONFIG | default "_example/header-matching/config.yaml"}}'
+
 tasks:
   server:
-    desc: start the example server
+    desc: start the example server with a given config (default: header-matching)
     summary: |
-      starts the example server on port 8080, requires the upstream service to be running
+      starts the example server on port 8080.
+      pass CONFIG to use a different example config, e.g.:
+        task server CONFIG=_example/upstream-forwarding/config.yaml
     cmd: |
       go run -ldflags "-X 'main.version=local'" ./cmd/groxy \
-        --file.name='_example/mock.yaml' --signature --debug --reflection \
+        --file.name='{{.CONFIG}}' --signature --debug --reflection \
         {{.CLI_ARGS}}
 
   stub-with-header:
     desc: >-
       make a request to stub method with header 'test: true', see summary for details
     summary: |
+      requires: task server CONFIG=_example/header-matching/config.yaml
       response will be: {"message": "needed value received","code": 200}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
@@ -24,10 +30,11 @@ tasks:
         {{.CLI_ARGS}} \
         localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Stub
 
-  stub-without-body:
-    desc: make a request to stub method without header, see summary for details
+  stub-with-body:
+    desc: make a request to stub method matching body value, see summary for details
     summary: |
-        response will be: {"message": "lol that works","code": 400}
+      requires: task server CONFIG=_example/body-matching/config.yaml
+      response will be: {"message": "lol that works","code": 400}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
         -d '{"message":"needed value"}' \
@@ -37,6 +44,7 @@ tasks:
   stub-random-uuid:
     desc: make a request to the service and get a random UUID
     summary: |
+      requires: task server CONFIG=_example/templating/config.yaml
       response will be: {"message": "<some random UUID>"}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
@@ -47,6 +55,7 @@ tasks:
   stub-matcher:
     desc: make a request to the service with a value matcher, see summary for details
     summary: |
+      requires: task server CONFIG=_example/templating/config.yaml
       mocker will wait for 2 seconds and the response will be: {"message": "10"}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
@@ -57,6 +66,7 @@ tasks:
   stub-generic:
     desc: make a request to the service without any header or body, see summary for details
     summary: |
+      requires: task server CONFIG=_example/nested-messages/config.yaml
       response will be: {"dependency": {"value": "some value"}}
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
@@ -66,7 +76,8 @@ tasks:
   error:
     desc: make a request to a method that always returns an error
     summary: |
-      status will be INVALID_ARGUMENT, response headers will contain "X-Request-Id: 123" and trailers 
+      requires: task server CONFIG=_example/error-responses/config.yaml
+      status will be INVALID_ARGUMENT, response headers will contain "X-Request-Id: 123" and trailers
       will contain "Powered-By: groxy"
     cmd: |
       grpcurl -v -plaintext -proto '_example/service.proto' \
@@ -74,14 +85,18 @@ tasks:
         localhost:8080 com.github.Semior001.groxy.example.mock.ExampleService/Error
 
   upstream:
-    desc: make a request that will be passed to the upstream service, requires the upstream service to be running
+    desc: make a request that will be passed to the upstream service
+    summary: |
+      requires: task server CONFIG=_example/upstream-forwarding/config.yaml
     cmd: |
       grpcurl -plaintext -use-reflection \
         {{.CLI_ARGS}} \
         localhost:8080 grpc_echo.v1.EchoService/Echo
 
   upstream-rewrite:
-    desc: make a request that will be passed to the upstream service with a rewritten method, requires the upstream service to be running
+    desc: make a request that will be passed to the upstream service with a rewritten method
+    summary: |
+      requires: task server CONFIG=_example/uri-rewrite/config.yaml
     cmd: |
       grpcurl -plaintext -proto '_example/service.proto' \
         {{.CLI_ARGS}} \

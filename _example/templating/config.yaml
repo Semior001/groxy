@@ -1,0 +1,36 @@
+version: 1
+
+rules:
+    # Responds with a random UUID in the message field.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "random"];
+        }
+    respond:
+      body: |
+        message StubResponse {
+            option (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "{{uuidv4}}"];
+        }
+
+    # Responds with the request's multiplier field multiplied by 2.
+    # Uses an expression matcher to ensure multiplier > 0,
+    # and waits 2 seconds before responding.
+  - match:
+      uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub"
+      body: |
+        message StubRequest {
+            option (groxypb.target) = true;
+            string message = 1   [(groxypb.value)   = "matcher"];
+            int32 multiplier = 2 [(groxypb.matcher) = "multiplier > 0"];
+        }
+    respond:
+      wait: 2s
+      body: |
+        message StubResponse {
+            option (groxypb.target) = true;
+            string message = 1 [(groxypb.value)  = "{{mul .multiplier 2}}"];
+        }

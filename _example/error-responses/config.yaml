@@ -1,0 +1,10 @@
+version: 1
+
+rules:
+    # Responds with a gRPC error status, custom headers, and trailers.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Error" }
+    respond:
+      status: { code: "INVALID_ARGUMENT", message: "invalid request" }
+      metadata:
+        header: { X-Request-Id: "123"   }
+        trailer: { Powered-By:   "groxy" }

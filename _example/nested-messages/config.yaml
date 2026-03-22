@@ -1,0 +1,23 @@
+version: 1
+
+rules:
+    # Responds with a nested message (Dependency) set via JSON in the
+    # groxypb.value annotation. Matches any request to the Stub method.
+  - match: { uri: "com.github.Semior001.groxy.example.mock.ExampleService/Stub" }
+    respond:
+      body: |
+        message Dependency {
+            string some_dependant_value = 6;
+            bool   some_dependant_bool  = 7;
+            string some_rich_text       = 8;
+        }
+
+        message StubResponse {
+            option (groxypb.target) = true;
+
+            Dependency dependency = 3 [(groxypb.value)  = `{
+                "some_dependant_value": "some value",
+                "some_dependant_bool":  true,
+                "some_rich_text":       "some text"
+            }`];
+        }

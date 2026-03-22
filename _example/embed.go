@@ -1,7 +1,9 @@
-// Package _example embeds the example groxy configuration.
+// Package _example embeds the example groxy configurations.
 package _example
 
-import _ "embed"
+import "embed"
 
-//go:embed mock.yaml
-var Examples string
+// ExampleConfigs contains all example configuration files.
+//
+//go:embed */config.yaml
+var ExampleConfigs embed.FS

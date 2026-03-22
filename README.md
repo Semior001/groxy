@@ -168,7 +168,17 @@ The `Forward` section contains the upstream to which the request should be forwa
 
 The configuration file is being watched for changes, and the server will reload the configuration file if it changes.
 
-You can also take a look at [examples](_example) for more information.
+You can also take a look at the [examples](_example) directory for more information. Each example is in its own directory with a README and a standalone config:
+
+| Example | Description |
+|---------|-------------|
+| [header-matching](_example/header-matching) | Match requests by HTTP headers and body fields |
+| [templating](_example/templating) | Dynamic responses with UUID generation, arithmetic, and wait |
+| [body-matching](_example/body-matching) | Match requests by specific body field values |
+| [nested-messages](_example/nested-messages) | Set nested message fields via JSON in annotations |
+| [error-responses](_example/error-responses) | Return gRPC errors with custom headers and trailers |
+| [upstream-forwarding](_example/upstream-forwarding) | Forward requests to an upstream service |
+| [uri-rewrite](_example/uri-rewrite) | Rewrite URIs with regex capture groups before forwarding |
 
 ### gRPC reflection
 gRoxy supports gRPC reflection services. If you want to merge the responses from the upstream gRPC reflection services, you need to provide the `--reflection` flag and set the `serve-reflection` flag to `true` on the upstreams that should be included in the reflection responses.
